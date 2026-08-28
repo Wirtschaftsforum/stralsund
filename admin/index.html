@@ -65,53 +65,52 @@
   .scan-feedback.err{background:var(--accent-tint);color:var(--accent);}
   .scan-feedback .sub{display:block;font-size:12.5px;font-weight:500;margin-top:4px;}
 
-  /* ===== Scanner Vollbild ===== */
+  /* ===== Scanner "Große Ansicht" (eigenes CSS statt Browser-Fullscreen-API,
+     da Safari auf iPhone/iPad die Fullscreen-API fuer normale Elemente nicht
+     unterstuetzt, nur fuer <video>). Funktioniert dadurch ueberall zuverlaessig. ===== */
   .scanner-fs-exit{display:none;}
-  #scannerContainer:fullscreen,
-  #scannerContainer:-webkit-full-screen{
+  body.scanner-bigview-active{overflow:hidden;}
+  #scannerContainer.scanner-bigview{
+    position:fixed;inset:0;z-index:400;
     background:#000;padding:0 !important;
     display:flex;flex-direction:column;align-items:center;justify-content:center;
     width:100vw;height:100vh;
   }
-  #scannerContainer:fullscreen #scannerReader,
-  #scannerContainer:-webkit-full-screen #scannerReader{
+  #scannerContainer.scanner-bigview #scannerReader{
     max-width:min(92vw,760px) !important;
     width:100%;
     border:none;border-radius:0;
   }
-  #scannerContainer:fullscreen #scannerReader video,
-  #scannerContainer:-webkit-full-screen #scannerReader video{
+  #scannerContainer.scanner-bigview #scannerReader video{
     border-radius:14px;
   }
-  #scannerContainer:fullscreen #scannerResult,
-  #scannerContainer:-webkit-full-screen #scannerResult{
+  #scannerContainer.scanner-bigview #scannerResult{
     max-width:min(92vw,760px) !important;
     width:100%;
     margin-top:28px !important;
   }
-  #scannerContainer:fullscreen .scan-feedback,
-  #scannerContainer:-webkit-full-screen .scan-feedback{
-    font-size:30px;padding:34px;border-radius:14px;
+  #scannerContainer.scanner-bigview .scan-feedback{
+    font-size:26px;padding:30px;border-radius:14px;
   }
-  #scannerContainer:fullscreen .scan-feedback .sub,
-  #scannerContainer:-webkit-full-screen .scan-feedback .sub{
-    font-size:17px;margin-top:8px;
+  #scannerContainer.scanner-bigview .scan-feedback .sub{
+    font-size:16px;margin-top:8px;
   }
-  #scannerContainer:fullscreen #scannerHint,
-  #scannerContainer:-webkit-full-screen #scannerHint{
-    color:#9aa1ad !important;margin-top:24px !important;font-size:14px !important;
-    max-width:min(92vw,760px) !important;
+  #scannerContainer.scanner-bigview #scannerHint{
+    color:#9aa1ad !important;margin-top:24px !important;font-size:13.5px !important;
+    max-width:min(92vw,760px) !important;padding:0 20px;
   }
-  #scannerContainer:fullscreen .scanner-fs-exit,
-  #scannerContainer:-webkit-full-screen .scanner-fs-exit{
-    display:flex;position:fixed;top:22px;right:26px;z-index:10;
+  #scannerContainer.scanner-bigview .scanner-fs-exit{
+    display:flex;position:fixed;top:max(18px, env(safe-area-inset-top, 18px));right:20px;z-index:10;
     width:46px;height:46px;border-radius:50%;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.3);
+    background:rgba(255,255,255,.14);color:#fff;border:1.5px solid rgba(255,255,255,.35);
     font-size:18px;cursor:pointer;
   }
-  #scannerContainer:fullscreen .scanner-fs-exit:hover,
-  #scannerContainer:-webkit-full-screen .scanner-fs-exit:hover{
-    background:rgba(255,255,255,.22);
+  #scannerContainer.scanner-bigview .scanner-fs-exit:hover{
+    background:rgba(255,255,255,.24);
+  }
+  @media (max-width:760px){
+    #scannerContainer.scanner-bigview #scannerReader{max-width:100vw !important;}
+    #scannerContainer.scanner-bigview .scan-feedback{font-size:19px;padding:22px;margin:0 16px;}
   }
   .login-forgot{
     width:100%;text-align:center;background:none;border:none;cursor:pointer;
@@ -156,19 +155,31 @@
   .nav-btn.nav-btn-scanner:hover{background:var(--accent-tint);}
   .nav-btn.nav-btn-scanner.active{background:var(--accent);color:#fff;border-color:var(--accent);}
 
+  /* Icons in Header-Buttons: auf Desktop unsichtbar (Text reicht), auf Mobil sichtbar */
+  .header-actions .btn svg{width:15px;height:15px;flex-shrink:0;display:none;}
+
   @media (max-width:760px){
-    .header-inner{justify-content:center;text-align:center;}
-    .header-actions{width:100%;justify-content:center;}
-    .quick-nav{
-      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px;
+    header{
+      padding:12px 0;position:sticky;top:0;z-index:140;
+      background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
     }
-    .nav-btn{
-      padding:10px 6px;font-size:12px;line-height:1.25;
-      justify-content:center;text-align:center;gap:4px;
-      white-space:normal;flex-direction:column;
+    .header-inner{flex-wrap:nowrap;justify-content:space-between;text-align:left;gap:8px;}
+    .brand{font-size:13.5px;gap:8px;}
+    .brand small{display:none;}
+    .brand .mark{width:16px;height:16px;border-radius:4px;}
+    .header-actions{width:auto;justify-content:flex-end;gap:8px;}
+    .header-actions .btn{
+      width:36px;height:36px;padding:0;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
     }
-    .nav-btn .nav-count{font-size:10.5px;padding:1px 7px;}
-    main{padding-bottom:96px;} /* Platz fuer die mobile Navbar unten */
+    .header-actions .btn svg{display:block;}
+    .header-actions .btn .btn-label{display:none;}
+
+    /* Quick-Nav oben ausblenden: die App-Navbar unten uebernimmt die Navigation */
+    .quick-nav{display:none;}
+
+    main{padding:20px 0 90px;}
+    .wrap{padding:0 16px;}
   }
 
   .panel.collapsed{display:none;}
@@ -452,8 +463,14 @@
       <small>Admin-Dashboard</small>
     </div>
     <div class="header-actions">
-      <a href="../index.html" class="btn btn-outline btn-sm">Zur Website</a>
-      <button class="btn btn-outline btn-sm" id="logoutBtn" style="display:none;">Abmelden</button>
+      <a href="../index.html" class="btn btn-outline btn-sm">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="btn-label">Zur Website</span>
+      </a>
+      <button class="btn btn-outline btn-sm" id="logoutBtn" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 16l4-4-4-4M20 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="btn-label">Abmelden</span>
+      </button>
     </div>
   </div>
 </header>
@@ -594,7 +611,7 @@
     <div class="panel-head">
       <h2>QR-Scanner Check-in</h2>
       <div class="panel-head-actions">
-        <button class="btn btn-outline btn-sm" id="scannerFullscreenBtn" style="display:none;">⛶ Vollbild</button>
+        <button class="btn btn-outline btn-sm" id="scannerFullscreenBtn" style="display:none;">⛶ Große Ansicht</button>
         <button class="btn btn-primary btn-sm" id="scannerStartBtn">Kamera starten</button>
         <button class="btn btn-outline btn-sm" id="scannerStopBtn" style="display:none;">Kamera stoppen</button>
       </div>
@@ -1022,8 +1039,8 @@
       document.getElementById('scannerStartBtn').style.display = '';
       document.getElementById('scannerStopBtn').style.display = 'none';
       document.getElementById('scannerFullscreenBtn').style.display = 'none';
-      if(document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
-      else if(document.webkitExitFullscreen && document.webkitFullscreenElement) document.webkitExitFullscreen();
+      document.getElementById('scannerContainer').classList.remove('scanner-bigview');
+      document.body.classList.remove('scanner-bigview-active');
     }
 
     panel.classList.remove('collapsed');
@@ -1031,8 +1048,10 @@
     panel.scrollIntoView({behavior:'smooth', block:'start'});
   }
 
-  document.querySelectorAll('.nav-btn, .mnav-item').forEach(btn => {
-    btn.addEventListener('click', () => activatePanel(btn.getAttribute('data-target')));
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.nav-btn, .mnav-item').forEach(btn => {
+      btn.addEventListener('click', () => activatePanel(btn.getAttribute('data-target')));
+    });
   });
 
   // Excel-Export
@@ -1221,28 +1240,23 @@
     });
   });
 
-  // ===== Vollbild-Modus =====
+  // ===== Große Ansicht (eigenes CSS statt Browser-Fullscreen-API) =====
   const scannerContainerEl = document.getElementById('scannerContainer');
 
   function isInScannerFullscreen(){
-    return (document.fullscreenElement || document.webkitFullscreenElement) === scannerContainerEl;
+    return scannerContainerEl.classList.contains('scanner-bigview');
   }
 
   function enterScannerFullscreen(){
-    if(scannerContainerEl.requestFullscreen){
-      scannerContainerEl.requestFullscreen().catch(() => {});
-    } else if(scannerContainerEl.webkitRequestFullscreen){
-      scannerContainerEl.webkitRequestFullscreen();
-    }
+    scannerContainerEl.classList.add('scanner-bigview');
+    document.body.classList.add('scanner-bigview-active');
+    updateFullscreenBtnLabel();
   }
 
   function exitScannerFullscreen(){
-    if(!isInScannerFullscreen()) return;
-    if(document.exitFullscreen){
-      document.exitFullscreen().catch(() => {});
-    } else if(document.webkitExitFullscreen){
-      document.webkitExitFullscreen();
-    }
+    scannerContainerEl.classList.remove('scanner-bigview');
+    document.body.classList.remove('scanner-bigview-active');
+    updateFullscreenBtnLabel();
   }
 
   document.getElementById('scannerFullscreenBtn').addEventListener('click', () => {
@@ -1250,12 +1264,14 @@
   });
   document.getElementById('scannerFsExitBtn').addEventListener('click', exitScannerFullscreen);
 
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'Escape' && isInScannerFullscreen()) exitScannerFullscreen();
+  });
+
   function updateFullscreenBtnLabel(){
     const btn = document.getElementById('scannerFullscreenBtn');
-    btn.textContent = isInScannerFullscreen() ? '⛶ Vollbild beenden' : '⛶ Vollbild';
+    btn.textContent = isInScannerFullscreen() ? '⛶ Ansicht beenden' : '⛶ Große Ansicht';
   }
-  document.addEventListener('fullscreenchange', updateFullscreenBtnLabel);
-  document.addEventListener('webkitfullscreenchange', updateFullscreenBtnLabel);
 
   /* ============================================================
      AUTH – Zugriff aufs Dashboard nur für eingeloggte Admin-Nutzer:innen

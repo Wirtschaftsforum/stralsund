@@ -369,6 +369,27 @@
   html.a11y-contrast .scan-feedback.err{background:#3a1015 !important;color:#ff9aa6 !important;}
   html.a11y-contrast a{color:var(--accent) !important;}
 
+  /* Das Barrierefreiheits-Panel selbst bleibt UNABHAENGIG vom Kontrastmodus
+     immer im normalen, hellen Stil mit schwarzem Text -- sonst wuerde es
+     sich durch die Variablen-Umdefinition selbst unlesbar machen
+     (weisser Text auf weissem Button-Hintergrund). */
+  html.a11y-contrast .a11y-panel{background:#fff !important;border-color:#e2e5ea !important;}
+  html.a11y-contrast .a11y-panel h2,
+  html.a11y-contrast .a11y-panel .a11y-sub,
+  html.a11y-contrast .a11y-panel .a11y-row span,
+  html.a11y-contrast .a11y-btnrow button,
+  html.a11y-contrast .a11y-switch,
+  html.a11y-contrast .a11y-reset,
+  html.a11y-contrast .a11y-close{color:#0d1117 !important;}
+  html.a11y-contrast .a11y-panel .a11y-sub{color:#8a8f99 !important;}
+  html.a11y-contrast .a11y-row{border-top-color:#e2e5ea !important;}
+  html.a11y-contrast .a11y-btnrow button,
+  html.a11y-contrast .a11y-switch{background:#fff !important;border-color:#e2e5ea !important;}
+  html.a11y-contrast .a11y-reset{background:#f4f5f7 !important;border-color:#e2e5ea !important;}
+  html.a11y-contrast .a11y-switch[aria-pressed="true"]{
+    background:#b5152b !important;border-color:#b5152b !important;color:#fff !important;
+  }
+
   html.a11y-underline a{text-decoration:underline !important;}
   html.a11y-bigcursor,html.a11y-bigcursor *{cursor:pointer !important;}
 
@@ -1134,6 +1155,12 @@
     panel.classList.remove('collapsed');
     document.querySelectorAll('[data-target="' + targetId + '"]').forEach(b => b.classList.add('active'));
     panel.scrollIntoView({behavior:'smooth', block:'start'});
+
+    // Scanner-Panel: Kamera + Große Ansicht direkt automatisch starten,
+    // kein zusaetzlicher Klick auf "Kamera starten" mehr noetig
+    if(targetId === 'scannerPanel' && typeof startScanner === 'function' && !qrScanner){
+      startScanner();
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function(){
@@ -1297,7 +1324,7 @@
     }
   }
 
-  document.getElementById('scannerStartBtn').addEventListener('click', () => {
+  function startScanner(){
     if(qrScanner) return;
     qrScanner = new Html5Qrcode('scannerReader');
     document.getElementById('scannerResult').innerHTML = '';
@@ -1315,7 +1342,9 @@
     }).catch((err) => {
       showScanFeedback('err', '✕ Kamera konnte nicht gestartet werden', 'Bitte Kamerazugriff im Browser erlauben. (' + err + ')');
     });
-  });
+  }
+
+  document.getElementById('scannerStartBtn').addEventListener('click', startScanner);
 
   document.getElementById('scannerStopBtn').addEventListener('click', () => {
     if(!qrScanner) return;
@@ -1494,7 +1523,7 @@
 
 <!-- ===== Barrierefreiheits-Widget ===== -->
 <button class="a11y-toggle" id="a11yToggle" aria-label="Barrierefreiheits-Einstellungen öffnen" aria-expanded="false" aria-controls="a11yPanel">
-  <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="12" cy="4" r="2.15"/><path d="M12 7.3c-3 0-5.6.72-7.6 1.9a1.15 1.15 0 0 0 1.16 1.98c1.16-.68 2.5-1.18 3.94-1.46l-1.02 3.9-3.06 3.5a1.15 1.15 0 0 0 1.73 1.52l2.9-3.3.9 3.9a1.15 1.15 0 0 0 2.24-.5l-1.1-4.8.9-3.42.9 3.42-1.1 4.8a1.15 1.15 0 0 0 2.24.5l.9-3.9 2.9 3.3a1.15 1.15 0 0 0 1.73-1.52l-3.06-3.5-1.02-3.9c1.44.28 2.78.78 3.94 1.46a1.15 1.15 0 0 0 1.16-1.98c-2-1.18-4.6-1.9-7.6-1.9Z"/></svg>
+  <img src="data:image/png;base64,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" alt="" aria-hidden="true" style="width:24px;height:auto;display:block;">
 </button>
 
 <div class="a11y-panel" id="a11yPanel" role="dialog" aria-modal="false" aria-labelledby="a11yPanelTitle">

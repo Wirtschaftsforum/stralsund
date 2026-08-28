@@ -5,11 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="../fonts.css">
-<script src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="../config.js?v=2"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
 <script>
-  const supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  const supabase = (window.supabase && window.SUPABASE_URL)
+    ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+    : null;
+  if(!supabase){
+    document.addEventListener('DOMContentLoaded', function(){
+      document.body.innerHTML =
+        '<div style="max-width:560px;margin:80px auto;padding:32px;font-family:Arial,sans-serif;' +
+        'background:#faeaec;border:1px solid #e8b6bd;border-radius:8px;color:#8a0f21;text-align:center;">' +
+        '<strong>Verbindung zur Datenbank fehlgeschlagen.</strong><br><br>' +
+        'Die Supabase-Bibliothek (cdn.jsdelivr.net) konnte nicht geladen werden. ' +
+        'Bitte Internetverbindung pruefen bzw. ob das Netzwerk/die Firewall die Adresse ' +
+        '<code>cdn.jsdelivr.net</code> blockiert, dann Seite neu laden.' +
+        '</div>';
+    });
+  }
 </script>
 
 <style>
@@ -41,6 +55,15 @@
   .login-error{font-size:13px;color:var(--accent);margin-bottom:14px;display:none;}
   .login-error.show{display:block;}
   .login-submit{width:100%;justify-content:center;margin-top:6px;}
+  .login-forgot{
+    width:100%;text-align:center;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
+    margin-top:14px;padding:4px;text-decoration:underline;
+  }
+  .login-forgot:hover{color:var(--accent-dark);}
+  .login-forgot-hint{font-size:13px;line-height:1.6;color:var(--body);margin-bottom:16px;}
+  .login-success{font-size:13px;color:#2f8a4e;margin-bottom:14px;display:none;line-height:1.6;}
+  .login-success.show{display:block;}
 
   header{background:#fff;border-bottom:1px solid var(--line);padding:22px 0;}
   .header-inner{display:flex;align-items:center;justify-content:space-between;}
@@ -282,6 +305,29 @@
       </div>
       <p class="login-error" id="loginError"></p>
       <button type="submit" class="btn btn-primary login-submit">Anmelden</button>
+      <button type="button" class="login-forgot" id="showForgot">Passwort vergessen?</button>
+    </form>
+
+    <form id="forgotForm" style="display:none;">
+      <p class="login-forgot-hint">Bitte E-Mail-Adresse eingeben. Wir senden Ihnen einen Link zum Zurücksetzen des Passworts.</p>
+      <div class="login-field">
+        <label for="forgotEmail">E-Mail</label>
+        <input type="email" id="forgotEmail" autocomplete="username" required>
+      </div>
+      <p class="login-error" id="forgotError"></p>
+      <p class="login-success" id="forgotSuccess">Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde soeben ein Link zum Zurücksetzen gesendet. Bitte E-Mails (auch Spam-Ordner) prüfen.</p>
+      <button type="submit" class="btn btn-primary login-submit">Link senden</button>
+      <button type="button" class="login-forgot" id="backToLogin">Zurück zum Login</button>
+    </form>
+
+    <form id="resetForm" style="display:none;">
+      <p class="login-forgot-hint">Bitte neues Passwort vergeben (mindestens 8 Zeichen).</p>
+      <div class="login-field">
+        <label for="newPassword">Neues Passwort</label>
+        <input type="password" id="newPassword" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="login-error" id="resetError"></p>
+      <button type="submit" class="btn btn-primary login-submit">Passwort speichern</button>
     </form>
   </div>
 </div>
@@ -957,8 +1003,28 @@
   }
 
   async function checkAuth(){
+    // Falls Supabase uns nach Klick auf den "Passwort zuruecksetzen"-Link
+    // aus der E-Mail hierher zurueckschickt, zeigt es einen PASSWORD_RECOVERY-Event.
+    // In dem Fall NICHT direkt ins Dashboard, sondern das Neu-Passwort-Formular zeigen.
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        showLogin();
+        showLoginView('reset');
+      }
+    });
+
     const { data: { session } } = await supabase.auth.getSession();
     if (session) { showApp(); } else { showLogin(); }
+  }
+
+  function showLoginView(view){
+    document.getElementById('loginForm').style.display = view === 'login' ? 'block' : 'none';
+    document.getElementById('forgotForm').style.display = view === 'forgot' ? 'block' : 'none';
+    document.getElementById('resetForm').style.display = view === 'reset' ? 'block' : 'none';
+    document.getElementById('loginError').classList.remove('show');
+    document.getElementById('forgotError').classList.remove('show');
+    document.getElementById('forgotSuccess').classList.remove('show');
+    document.getElementById('resetError').classList.remove('show');
   }
 
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -976,8 +1042,50 @@
     showApp();
   });
 
+  document.getElementById('showForgot').addEventListener('click', () => {
+    showLoginView('forgot');
+  });
+
+  document.getElementById('backToLogin').addEventListener('click', () => {
+    showLoginView('login');
+  });
+
+  document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgotEmail').value;
+    const errEl = document.getElementById('forgotError');
+    const successEl = document.getElementById('forgotSuccess');
+    errEl.classList.remove('show');
+    successEl.classList.remove('show');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) {
+      errEl.textContent = 'Fehler: ' + error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    successEl.classList.add('show');
+  });
+
+  document.getElementById('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('newPassword').value;
+    const errEl = document.getElementById('resetError');
+    errEl.classList.remove('show');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      errEl.textContent = 'Fehler: ' + error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    showLoginView('login');
+    showApp();
+  });
+
   document.getElementById('logoutBtn').addEventListener('click', async () => {
     await supabase.auth.signOut();
+    showLoginView('login');
     showLogin();
   });
 

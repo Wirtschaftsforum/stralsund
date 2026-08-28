@@ -553,7 +553,13 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet …';
 
+      // ID bereits im Browser erzeugen: so kennen wir sie sofort fuer die QR-Vorschau,
+      // ohne nach dem Insert etwas zurücklesen zu muessen (die öffentliche Anmeldeseite
+      // darf aus Datenschutzgruenden nur schreiben, nicht lesen).
+      var mainId = crypto.randomUUID();
+
       var rows = [{
+        id: mainId,
         anrede: data.anrede || null,
         titel: data.titel || null,
         vorname: data.vorname,
@@ -569,6 +575,7 @@
 
       additionalPersons.forEach(function(p){
         rows.push({
+          id: crypto.randomUUID(),
           anrede: null, titel: null,
           vorname: p.vorname, nachname: p.nachname,
           firma: p.firma, funktion: null,
@@ -577,7 +584,7 @@
         });
       });
 
-      var { data: inserted, error } = await supabase.from('participants').insert(rows).select('id, email');
+      var { error } = await supabase.from('participants').insert(rows);
 
       if(error){
         if(error.code === '23505'){
@@ -599,11 +606,8 @@
         successText.textContent = 'Wir haben die Angaben für ' + totalCount + ' Personen erhalten. Jede angemeldete Person erhält in Kürze eine eigene Bestätigung mit persönlichem QR-Code per E-Mail.';
       }
 
-      // QR-Code fuer die Hauptperson (erste Zeile) direkt im Browser anzeigen
-      var mainRow = inserted && inserted.find(function(r){ return r.email === data.email; });
-      if(mainRow){
-        showQrPreview(mainRow.id);
-      }
+      // QR-Code fuer die Hauptperson direkt im Browser anzeigen
+      showQrPreview(mainId);
 
       successBox.scrollIntoView({behavior:'smooth', block:'start'});
     });

@@ -6,6 +6,7 @@
 <title>Dashboard – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="../fonts.css">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script src="../config.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
 <script>
@@ -55,6 +56,14 @@
   .login-error{font-size:13px;color:var(--accent);margin-bottom:14px;display:none;}
   .login-error.show{display:block;}
   .login-submit{width:100%;justify-content:center;margin-top:6px;}
+  .scan-feedback{
+    padding:20px;border-radius:8px;font-size:15px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .scan-feedback.ok{background:var(--ok-tint);color:var(--ok);}
+  .scan-feedback.warn{background:#fff6e0;color:#8a5a0f;}
+  .scan-feedback.err{background:var(--accent-tint);color:var(--accent);}
+  .scan-feedback .sub{display:block;font-size:12.5px;font-weight:500;margin-top:4px;}
   .login-forgot{
     width:100%;text-align:center;background:none;border:none;cursor:pointer;
     font-family:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
@@ -361,6 +370,9 @@
     <button class="nav-btn" id="navWaitlistBtn" data-target="waitlistPanel">
       Warteliste <span class="nav-count" id="navWaitlistCount">0</span>
     </button>
+    <button class="nav-btn" id="navScannerBtn" data-target="scannerPanel">
+      📷 Scanner
+    </button>
   </div>
 
   <section class="panel" id="overviewPanel">
@@ -473,6 +485,24 @@
       <tbody id="waitlistBody"></tbody>
     </table>
     <div class="empty" id="waitlistEmpty" style="display:none;">Die Warteliste ist aktuell leer.</div>
+  </section>
+
+  <section class="panel collapsed" id="scannerPanel">
+    <div class="panel-head">
+      <h2>QR-Scanner Check-in</h2>
+      <div class="panel-head-actions">
+        <button class="btn btn-primary btn-sm" id="scannerStartBtn">Kamera starten</button>
+        <button class="btn btn-outline btn-sm" id="scannerStopBtn" style="display:none;">Kamera stoppen</button>
+      </div>
+    </div>
+    <div style="padding:24px;">
+      <div id="scannerReader" style="max-width:480px;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid var(--line);"></div>
+      <div id="scannerResult" style="max-width:480px;margin:20px auto 0;text-align:center;"></div>
+      <p style="max-width:480px;margin:16px auto 0;font-size:12.5px;color:#8a8f99;text-align:center;">
+        QR-Code aus der Bestätigungsmail vor die Kamera halten. Der Check-in erfolgt automatisch,
+        Mehrfach-Scans desselben Codes werden 5 Sekunden lang ignoriert.
+      </p>
+    </div>
   </section>
 
 </main>
@@ -628,6 +658,21 @@
     if (selErr) throw new Error(selErr.message);
     const { error } = await supabase.from('participants').update({ checked_in: !row.checked_in }).eq('id', id);
     if (error) throw new Error(error.message);
+  }
+
+  // Fuer den QR-Scanner: liefert Status + Name zurueck, statt nur zu togglen.
+  async function checkinByParticipantId(id){
+    const { data: row, error: selErr } = await supabase
+      .from('participants')
+      .select('vorname,nachname,checked_in')
+      .eq('id', id)
+      .maybeSingle();
+    if (selErr) throw new Error(selErr.message);
+    if (!row) return { found:false };
+    if (row.checked_in) return { found:true, already:true, name: row.vorname + ' ' + row.nachname };
+    const { error } = await supabase.from('participants').update({ checked_in: true }).eq('id', id);
+    if (error) throw new Error(error.message);
+    return { found:true, already:false, name: row.vorname + ' ' + row.nachname };
   }
 
   async function cancelParticipant(id){
@@ -868,6 +913,13 @@
       document.querySelectorAll('.panel').forEach(p => p.classList.add('collapsed'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
+      // Scanner-Kamera stoppen, wenn der Scanner-Tab verlassen wird
+      if(targetId !== 'scannerPanel' && typeof qrScanner !== 'undefined' && qrScanner){
+        qrScanner.stop().then(() => { qrScanner.clear(); qrScanner = null; }).catch(() => {});
+        document.getElementById('scannerStartBtn').style.display = '';
+        document.getElementById('scannerStopBtn').style.display = 'none';
+      }
+
       // angeklicktes Panel öffnen, außer es war bereits offen (dann bleibt es zu)
       if(!isOpen){
         panel.classList.remove('collapsed');
@@ -983,6 +1035,80 @@
       modalError.textContent = err.message || 'Ein Fehler ist aufgetreten.';
       modalError.classList.add('show');
     }
+  });
+
+  /* ============================================================
+     QR-SCANNER – Check-in per Kamera
+  ============================================================ */
+
+  let qrScanner = null;
+  let lastScanCode = null;
+  let lastScanTime = 0;
+
+  function showScanFeedback(type, mainText, subText){
+    const el = document.getElementById('scannerResult');
+    el.innerHTML = `<div class="scan-feedback ${type}">
+      ${mainText}
+      ${subText ? '<span class="sub">' + subText + '</span>' : ''}
+    </div>`;
+  }
+
+  async function handleScanSuccess(decodedText){
+    const now = Date.now();
+    if(decodedText === lastScanCode && (now - lastScanTime) < 5000){
+      return; // gleicher Code innerhalb von 5s -> ignorieren
+    }
+    lastScanCode = decodedText;
+    lastScanTime = now;
+
+    if(!decodedText.startsWith('WFS-CHECKIN:')){
+      showScanFeedback('err', '✕ Unbekannter QR-Code', 'Dieser Code gehört nicht zum Wirtschaftsforum.');
+      return;
+    }
+    const id = decodedText.replace('WFS-CHECKIN:', '').trim();
+
+    try{
+      const result = await checkinByParticipantId(id);
+      if(!result.found){
+        showScanFeedback('err', '✕ Nicht gefunden', 'Keine Anmeldung mit diesem Code gefunden.');
+        return;
+      }
+      if(result.already){
+        showScanFeedback('warn', '⚠ Bereits eingecheckt', result.name);
+        return;
+      }
+      showScanFeedback('ok', '✓ Eingecheckt', result.name);
+      loadAll();
+    }catch(err){
+      showScanFeedback('err', '✕ Fehler', err.message);
+    }
+  }
+
+  document.getElementById('scannerStartBtn').addEventListener('click', () => {
+    if(qrScanner) return;
+    qrScanner = new Html5Qrcode('scannerReader');
+    document.getElementById('scannerResult').innerHTML = '';
+    qrScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: 260 },
+      handleScanSuccess,
+      () => {} // laufende Frames ohne erkannten Code -> ignorieren
+    ).then(() => {
+      document.getElementById('scannerStartBtn').style.display = 'none';
+      document.getElementById('scannerStopBtn').style.display = '';
+    }).catch((err) => {
+      showScanFeedback('err', '✕ Kamera konnte nicht gestartet werden', 'Bitte Kamerazugriff im Browser erlauben. (' + err + ')');
+    });
+  });
+
+  document.getElementById('scannerStopBtn').addEventListener('click', () => {
+    if(!qrScanner) return;
+    qrScanner.stop().then(() => {
+      qrScanner.clear();
+      qrScanner = null;
+      document.getElementById('scannerStartBtn').style.display = '';
+      document.getElementById('scannerStopBtn').style.display = 'none';
+    });
   });
 
   /* ============================================================

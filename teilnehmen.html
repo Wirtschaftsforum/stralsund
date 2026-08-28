@@ -99,6 +99,25 @@
   .form-section{padding:64px 0 100px;}
   .form-card{max-width:760px;margin:0 auto;}
   .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px;}
+  .additional-persons{margin-top:8px;}
+  .person-block{
+    position:relative;border:1.5px solid var(--line);border-radius:6px;
+    padding:22px 20px 18px;margin-bottom:16px;background:var(--gray-bg);
+  }
+  .person-block .form-grid{grid-template-columns:1fr 1fr;gap:16px 20px;}
+  .person-block-label{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#8a8f99;margin-bottom:14px;}
+  .person-remove{
+    position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;
+    color:#8a8f99;font-size:13px;font-weight:700;display:flex;align-items:center;gap:4px;
+  }
+  .person-remove:hover{color:var(--accent);}
+  .add-person-btn{
+    display:inline-flex;align-items:center;gap:6px;margin:4px 0 24px;
+    font-family:inherit;font-size:13.5px;font-weight:700;color:var(--accent);
+    background:none;border:1.5px dashed var(--line);border-radius:6px;padding:12px 18px;
+    cursor:pointer;width:100%;justify-content:center;transition:border-color .15s ease,background .15s ease;
+  }
+  .add-person-btn:hover{border-color:var(--accent);background:var(--accent-tint);}
   .field{display:flex;flex-direction:column;gap:7px;}
   .field.full{grid-column:1 / -1;}
   .field label{font-size:13px;font-weight:600;color:var(--ink);}
@@ -246,6 +265,7 @@
 </style>
 <script src="config.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 
@@ -353,6 +373,9 @@
 
       </div>
 
+      <div class="additional-persons" id="additionalPersons"></div>
+      <button type="button" class="add-person-btn" id="addPersonBtn">+ Weitere Person hinzufügen</button>
+
       <div class="checkbox-field">
         <input type="checkbox" id="datenschutz" name="datenschutz" required>
         <label for="datenschutz">Ich habe die <a href="datenschutz.html">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung meiner Daten zur Bearbeitung meiner Anmeldung zu. <span class="req">*</span></label>
@@ -368,7 +391,15 @@
     <div class="success-box" id="successBox">
       <div class="ic-ok"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h2>Vielen Dank für Ihre Anmeldung!</h2>
-      <p>Wir haben Ihre Angaben erhalten und senden Ihnen in Kürze eine Bestätigung per E-Mail.</p>
+      <p id="successText">Wir haben Ihre Angaben erhalten und senden Ihnen in Kürze eine Bestätigung per E-Mail.</p>
+      <div id="qrPreviewBox" style="display:none;margin-top:24px;padding-top:24px;border-top:1px solid var(--line);">
+        <p style="font-weight:700;color:var(--ink);margin-bottom:14px;">Ihr persönlicher QR-Code für den Einlass</p>
+        <img id="qrPreviewImg" alt="QR-Code für den Check-in" style="width:220px;height:220px;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fff;">
+        <div style="margin-top:16px;">
+          <a id="qrDownloadLink" class="btn btn-outline-dark" download="wirtschaftsforum-checkin-qrcode.png">QR-Code speichern</a>
+        </div>
+        <p style="font-size:12.5px;color:#8a8f99;margin-top:12px;">Diesen Code erhalten Sie zusätzlich auch per E-Mail.</p>
+      </div>
     </div>
 
   </div>
@@ -445,6 +476,72 @@
     var successBox = document.getElementById('successBox');
     var submitBtn = form.querySelector('button[type="submit"]');
 
+    // ===== Weitere Person hinzufuegen/entfernen =====
+    var additionalContainer = document.getElementById('additionalPersons');
+    var addPersonBtn = document.getElementById('addPersonBtn');
+    var personCounter = 0;
+
+    function addPersonBlock(){
+      personCounter++;
+      var idx = personCounter;
+      var block = document.createElement('div');
+      block.className = 'person-block';
+      block.innerHTML =
+        '<div class="person-block-label">Weitere Person ' + idx + '</div>' +
+        '<button type="button" class="person-remove" data-remove="' + idx + '">✕ Entfernen</button>' +
+        '<div class="form-grid">' +
+          '<div class="field">' +
+            '<label for="zp_vorname_' + idx + '">Vorname <span class="req">*</span></label>' +
+            '<input type="text" id="zp_vorname_' + idx + '" name="zp_vorname_' + idx + '" autocomplete="given-name" required>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="zp_nachname_' + idx + '">Nachname <span class="req">*</span></label>' +
+            '<input type="text" id="zp_nachname_' + idx + '" name="zp_nachname_' + idx + '" autocomplete="family-name" required>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="zp_firma_' + idx + '">Firma / Institut <span class="opt">(optional)</span></label>' +
+            '<input type="text" id="zp_firma_' + idx + '" name="zp_firma_' + idx + '" autocomplete="organization">' +
+          '</div>' +
+          '<div class="field">' +
+            '<label for="zp_email_' + idx + '">E-Mail <span class="req">*</span></label>' +
+            '<input type="email" id="zp_email_' + idx + '" name="zp_email_' + idx + '" autocomplete="email" required>' +
+          '</div>' +
+        '</div>';
+      additionalContainer.appendChild(block);
+      block.querySelector('[data-remove]').addEventListener('click', function(){
+        block.remove();
+      });
+    }
+
+    addPersonBtn.addEventListener('click', addPersonBlock);
+
+    function collectAdditionalPersons(){
+      var blocks = additionalContainer.querySelectorAll('.person-block');
+      var list = [];
+      blocks.forEach(function(block){
+        var vorname = block.querySelector('input[name^="zp_vorname_"]').value;
+        var nachname = block.querySelector('input[name^="zp_nachname_"]').value;
+        var firma = block.querySelector('input[name^="zp_firma_"]').value;
+        var email = block.querySelector('input[name^="zp_email_"]').value;
+        list.push({
+          vorname: vorname, nachname: nachname,
+          firma: firma || null, email: email
+        });
+      });
+      return list;
+    }
+
+    // ===== QR-Code im Browser anzeigen (nutzt dieselbe Kodierung wie die Bestaetigungsmail) =====
+    function showQrPreview(participantId){
+      var qrData = 'WFS-CHECKIN:' + participantId;
+      QRCode.toDataURL(qrData, { width: 440, margin: 2 }, function(err, url){
+        if(err){ console.error('QR-Code konnte nicht erzeugt werden:', err); return; }
+        document.getElementById('qrPreviewImg').src = url;
+        document.getElementById('qrDownloadLink').href = url;
+        document.getElementById('qrPreviewBox').style.display = 'block';
+      });
+    }
+
     form.addEventListener('submit', async function(e){
       e.preventDefault();
       if(!form.checkValidity()){
@@ -452,10 +549,11 @@
         return;
       }
       var data = Object.fromEntries(new FormData(form).entries());
+      var additionalPersons = collectAdditionalPersons();
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet …';
 
-      var { error } = await supabase.from('participants').insert([{
+      var rows = [{
         anrede: data.anrede || null,
         titel: data.titel || null,
         vorname: data.vorname,
@@ -467,11 +565,23 @@
         plz: data.plz || null,
         email: data.email,
         telefon: data.telefon || null
-      }]);
+      }];
+
+      additionalPersons.forEach(function(p){
+        rows.push({
+          anrede: null, titel: null,
+          vorname: p.vorname, nachname: p.nachname,
+          firma: p.firma, funktion: null,
+          strasse: null, stadt: null, plz: null,
+          email: p.email, telefon: null
+        });
+      });
+
+      var { data: inserted, error } = await supabase.from('participants').insert(rows).select('id, email');
 
       if(error){
         if(error.code === '23505'){
-          alert('Für diese E-Mail-Adresse liegt bereits eine Anmeldung vor.');
+          alert('Für mindestens eine der angegebenen E-Mail-Adressen liegt bereits eine Anmeldung vor. Bitte alle E-Mail-Adressen prüfen.');
         } else {
           alert('Anmeldung konnte nicht gespeichert werden: ' + error.message);
         }
@@ -482,6 +592,19 @@
 
       form.classList.add('hide');
       successBox.classList.add('show');
+
+      var totalCount = 1 + additionalPersons.length;
+      var successText = document.getElementById('successText');
+      if(totalCount > 1){
+        successText.textContent = 'Wir haben die Angaben für ' + totalCount + ' Personen erhalten. Jede angemeldete Person erhält in Kürze eine eigene Bestätigung mit persönlichem QR-Code per E-Mail.';
+      }
+
+      // QR-Code fuer die Hauptperson (erste Zeile) direkt im Browser anzeigen
+      var mainRow = inserted && inserted.find(function(r){ return r.email === data.email; });
+      if(mainRow){
+        showQrPreview(mainRow.id);
+      }
+
       successBox.scrollIntoView({behavior:'smooth', block:'start'});
     });
   })();

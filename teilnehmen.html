@@ -245,7 +245,7 @@
 
 </style>
 <script src="config.js?v=2"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
 </head>
 <body>
 
@@ -430,6 +430,16 @@
 
   // Formular-Handling: sendet die Anmeldung direkt an Supabase
   (function(){
+    if(!window.supabase){
+      var form0 = document.getElementById('anmeldeForm');
+      var btn0 = form0 ? form0.querySelector('button[type="submit"]') : null;
+      if(btn0){
+        btn0.disabled = true;
+        btn0.textContent = 'Anmeldung derzeit nicht verfügbar';
+      }
+      console.error('Supabase-Bibliothek (cdn.jsdelivr.net) konnte nicht geladen werden.');
+      return;
+    }
     var supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
     var form = document.getElementById('anmeldeForm');
     var successBox = document.getElementById('successBox');

@@ -3,187 +3,279 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Einladung zum Wirtschaftsforum Stralsund</title>
-<link rel="stylesheet" href="fonts.css">
+<title>Dashboard – Wirtschaftsforum Stralsund</title>
+<link rel="stylesheet" href="../fonts.css">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="../config.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
+<script>
+  const supabase = (window.supabase && window.SUPABASE_URL)
+    ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
+    : null;
+  if(!supabase){
+    document.addEventListener('DOMContentLoaded', function(){
+      document.body.innerHTML =
+        '<div style="max-width:560px;margin:80px auto;padding:32px;font-family:Arial,sans-serif;' +
+        'background:#faeaec;border:1px solid #e8b6bd;border-radius:8px;color:#8a0f21;text-align:center;">' +
+        '<strong>Verbindung zur Datenbank fehlgeschlagen.</strong><br><br>' +
+        'Die Supabase-Bibliothek (cdn.jsdelivr.net) konnte nicht geladen werden. ' +
+        'Bitte Internetverbindung pruefen bzw. ob das Netzwerk/die Firewall die Adresse ' +
+        '<code>cdn.jsdelivr.net</code> blockiert, dann Seite neu laden.' +
+        '</div>';
+    });
+  }
+</script>
+
 <style>
   :root{
-    --accent:#b5152b;
-    --accent-dark:#8a0f21;
-    --accent-tint:#faeaec;
-    --ink:#0d1117;
-    --body:#3d4148;
-    --paper:#ffffff;
-    --gray-bg:#f4f5f7;
-    --line:#e2e5ea;
-    --footer-bg:#04182e;
-    --footer-text:#aeb8c6;
+    --accent:#b5152b;--accent-dark:#8a0f21;--accent-tint:#faeaec;
+    --ink:#0d1117;--body:#3d4148;--paper:#ffffff;--gray-bg:#f4f5f7;--line:#e2e5ea;
+    --ok:#1f8a4c;--ok-tint:#e9f7ef;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    font-family:'Inter',Arial,sans-serif;
-    color:var(--body);
-    background:var(--paper);
-    -webkit-font-smoothing:antialiased;
+  body{font-family:'Inter',Arial,sans-serif;color:var(--body);background:var(--gray-bg);-webkit-font-smoothing:antialiased;}
+  a{color:inherit;}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 32px;}
+
+  .login-backdrop{
+    position:fixed;inset:0;background:var(--gray-bg);display:none;
+    align-items:center;justify-content:center;z-index:200;padding:20px;
   }
-  img{display:block;max-width:100%;}
-  a{color:inherit;text-decoration:none;}
-  .wrap{max-width:1180px;margin:0 auto;padding:0 40px;}
-  .eyebrow{
-    font-size:12px;letter-spacing:.08em;text-transform:uppercase;
-    font-weight:700;color:var(--accent);
+  .login-backdrop.open{display:flex;}
+  .login-box{background:#fff;border:1px solid var(--line);border-radius:8px;padding:36px;max-width:380px;width:100%;}
+  .login-box .brand{margin-bottom:26px;}
+  .login-box h2{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:22px;}
+  .login-field{margin-bottom:16px;}
+  .login-field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:6px;}
+  .login-field input{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);padding:11px 13px;
+    border:1.5px solid var(--line);border-radius:5px;
+  }
+  .login-field input:focus{outline:none;border-color:var(--accent);}
+  .login-error{font-size:13px;color:var(--accent);margin-bottom:14px;display:none;}
+  .login-error.show{display:block;}
+  .login-submit{width:100%;justify-content:center;margin-top:6px;}
+  .scan-feedback{
+    padding:20px;border-radius:8px;font-size:15px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;gap:10px;
+  }
+  .scan-feedback.ok{background:var(--ok-tint);color:var(--ok);}
+  .scan-feedback.warn{background:#fff6e0;color:#8a5a0f;}
+  .scan-feedback.err{background:var(--accent-tint);color:var(--accent);}
+  .scan-feedback .sub{display:block;font-size:12.5px;font-weight:500;margin-top:4px;}
+
+  /* ===== Scanner Vollbild ===== */
+  .scanner-fs-exit{display:none;}
+  #scannerContainer:fullscreen,
+  #scannerContainer:-webkit-full-screen{
+    background:#000;padding:0 !important;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    width:100vw;height:100vh;
+  }
+  #scannerContainer:fullscreen #scannerReader,
+  #scannerContainer:-webkit-full-screen #scannerReader{
+    max-width:min(92vw,760px) !important;
+    width:100%;
+    border:none;border-radius:0;
+  }
+  #scannerContainer:fullscreen #scannerReader video,
+  #scannerContainer:-webkit-full-screen #scannerReader video{
+    border-radius:14px;
+  }
+  #scannerContainer:fullscreen #scannerResult,
+  #scannerContainer:-webkit-full-screen #scannerResult{
+    max-width:min(92vw,760px) !important;
+    width:100%;
+    margin-top:28px !important;
+  }
+  #scannerContainer:fullscreen .scan-feedback,
+  #scannerContainer:-webkit-full-screen .scan-feedback{
+    font-size:30px;padding:34px;border-radius:14px;
+  }
+  #scannerContainer:fullscreen .scan-feedback .sub,
+  #scannerContainer:-webkit-full-screen .scan-feedback .sub{
+    font-size:17px;margin-top:8px;
+  }
+  #scannerContainer:fullscreen #scannerHint,
+  #scannerContainer:-webkit-full-screen #scannerHint{
+    color:#9aa1ad !important;margin-top:24px !important;font-size:14px !important;
+    max-width:min(92vw,760px) !important;
+  }
+  #scannerContainer:fullscreen .scanner-fs-exit,
+  #scannerContainer:-webkit-full-screen .scanner-fs-exit{
+    display:flex;position:fixed;top:22px;right:26px;z-index:10;
+    width:46px;height:46px;border-radius:50%;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.12);color:#fff;border:1.5px solid rgba(255,255,255,.3);
+    font-size:18px;cursor:pointer;
+  }
+  #scannerContainer:fullscreen .scanner-fs-exit:hover,
+  #scannerContainer:-webkit-full-screen .scanner-fs-exit:hover{
+    background:rgba(255,255,255,.22);
+  }
+  .login-forgot{
+    width:100%;text-align:center;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:12.5px;font-weight:600;color:var(--accent);
+    margin-top:14px;padding:4px;text-decoration:underline;
+  }
+  .login-forgot:hover{color:var(--accent-dark);}
+  .login-forgot-hint{font-size:13px;line-height:1.6;color:var(--body);margin-bottom:16px;}
+  .login-success{font-size:13px;color:#2f8a4e;margin-bottom:14px;display:none;line-height:1.6;}
+  .login-success.show{display:block;}
+
+  header{background:#fff;border-bottom:1px solid var(--line);padding:22px 0;}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+  .header-actions{display:flex;gap:10px;}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:16px;color:var(--ink);}
+  .brand .mark{width:20px;height:20px;background:var(--accent);border-radius:3px;}
+  .brand small{display:block;font-weight:500;font-size:12px;color:#8a8f99;margin-top:2px;}
+
+  main{padding:40px 0 80px;}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px;}
+  .stat-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:22px 24px;}
+  .stat-card .label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8a8f99;font-weight:700;}
+  .stat-card .value{font-size:34px;font-weight:800;color:var(--ink);margin-top:8px;}
+  .stat-card.accent .value{color:var(--accent);}
+  .stat-card.ok .value{color:var(--ok);}
+
+  .quick-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:44px;}
+  .nav-btn{
+    display:inline-flex;align-items:center;gap:8px;padding:13px 20px;font-size:14px;font-weight:700;
+    border-radius:6px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;
+    transition:border-color .15s ease,background .15s ease,color .15s ease;
+  }
+  .nav-btn:hover{border-color:var(--ink);}
+  .nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+  .nav-btn .nav-count{
+    font-size:12px;font-weight:800;background:rgba(0,0,0,.08);color:inherit;
+    padding:2px 8px;border-radius:20px;
+  }
+  .nav-btn.active .nav-count{background:rgba(255,255,255,.2);}
+  .nav-btn.nav-btn-scanner{border-color:var(--accent);color:var(--accent);}
+  .nav-btn.nav-btn-scanner:hover{background:var(--accent-tint);}
+  .nav-btn.nav-btn-scanner.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  @media (max-width:760px){
+    .header-inner{justify-content:center;text-align:center;}
+    .header-actions{width:100%;justify-content:center;}
+    .quick-nav{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px;
+    }
+    .nav-btn{
+      padding:10px 6px;font-size:12px;line-height:1.25;
+      justify-content:center;text-align:center;gap:4px;
+      white-space:normal;flex-direction:column;
+    }
+    .nav-btn .nav-count{font-size:10.5px;padding:1px 7px;}
+    main{padding-bottom:96px;} /* Platz fuer die mobile Navbar unten */
   }
 
-  /* ---------- Buttons ---------- */
-  .btn{
-    display:inline-flex;align-items:center;gap:8px;
-    padding:13px 26px;
-    font-size:14px;font-weight:600;
-    border-radius:3px;border:1.5px solid transparent;
-    cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  .panel.collapsed{display:none;}
+  .overview-body{padding:28px 24px 32px;}
+  .overview-body .stats{margin-bottom:28px;}
+
+  .overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .overview-card{border:1px solid var(--line);border-radius:6px;padding:22px;}
+  .overview-card h3{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#5b6270;font-weight:800;margin-bottom:18px;}
+
+  .capacity-bar-track{
+    height:16px;border-radius:20px;background:var(--gray-bg);overflow:hidden;border:1px solid var(--line);
   }
-  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+  .capacity-bar-fill{
+    height:100%;border-radius:20px 0 0 20px;background:linear-gradient(90deg, var(--accent), var(--accent-dark));
+    transition:width .4s ease;width:0%;
+  }
+  .capacity-label{font-size:26px;font-weight:800;color:var(--ink);margin-top:14px;}
+  .capacity-sub{font-size:13px;color:#5b6270;margin-top:4px;}
+
+  .latest-list{list-style:none;display:flex;flex-direction:column;gap:2px;}
+  .latest-list li{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:11px 0;border-bottom:1px solid var(--line);font-size:13.5px;
+  }
+  .latest-list li:last-child{border-bottom:none;}
+  .latest-name{font-weight:700;color:var(--ink);}
+  .latest-firma{font-size:12.5px;color:#5b6270;}
+  .latest-date{font-size:12px;color:#8a8f99;white-space:nowrap;}
+  .latest-empty{padding:14px 0;color:#8a8f99;font-size:13.5px;}
+
+  @media (max-width:760px){
+    .overview-grid{grid-template-columns:1fr;}
+  }
+
+  .panel-search{
+    padding:16px 24px;border-bottom:1px solid var(--line);background:var(--gray-bg);
+  }
+  .panel-search input{
+    width:100%;max-width:360px;font-family:inherit;font-size:14px;color:var(--ink);
+    padding:10px 14px;border:1.5px solid var(--line);border-radius:5px;background:#fff;
+  }
+  .panel-search input:focus{outline:none;border-color:var(--accent);}
+  .panel-head-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+
+  section.panel{background:#fff;border:1px solid var(--line);border-radius:6px;margin-bottom:32px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--line);}
+  .panel-head h2{font-size:16px;font-weight:800;color:var(--ink);}
+  .panel-head .count{font-size:12.5px;color:#8a8f99;margin-left:8px;font-weight:600;}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:6px;padding:9px 16px;font-size:13px;font-weight:600;
+    border-radius:4px;border:1.5px solid transparent;cursor:pointer;background:none;
+    transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
   .btn-primary{background:var(--accent);color:#fff;}
   .btn-primary:hover{background:var(--accent-dark);}
-  .btn-outline-dark{background:transparent;color:var(--ink);border-color:var(--ink);}
-  .btn-outline-dark:hover{background:var(--ink);color:#fff;}
-  .btn-outline-light{background:transparent;color:#fff;border-color:rgba(255,255,255,.7);}
-  .btn-outline-light:hover{background:#fff;color:var(--ink);}
-  .btn-arrow{transition:transform .15s ease;}
-  .btn:hover .btn-arrow{transform:translateX(3px);}
+  .btn-outline{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn-outline:hover{border-color:var(--ink);}
+  .btn-sm{padding:6px 12px;font-size:12.5px;}
+  .btn-ok{background:var(--ok-tint);color:var(--ok);}
+  .btn-ok:hover{background:#d7f0e1;}
+  .btn-danger{background:var(--accent-tint);color:var(--accent);}
+  .btn-danger:hover{background:#f4d3d8;}
 
-  /* ---------- Header ---------- */
-  header{
-    position:sticky;top:0;z-index:50;
-    background:rgba(255,255,255,.96);
-    backdrop-filter:blur(6px);
-    border-bottom:1px solid var(--line);
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#fff;
+    font-weight:700;padding:12px 24px;background:var(--ink);
   }
-  .nav{display:flex;align-items:center;justify-content:space-between;height:76px;}
-  .brand{display:flex;align-items:center;gap:12px;font-weight:800;font-size:18px;color:var(--ink);}
-  .brand .mark{width:28px;height:28px;background:var(--accent);border-radius:6px;flex:none;}
-  .nav-right{display:flex;align-items:center;gap:22px;}
-  .burger{display:flex;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:4px;}
-  .burger span{width:22px;height:2px;background:var(--ink);display:block;transition:transform .2s ease,opacity .2s ease;}
-  .burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg);}
-  .burger[aria-expanded="true"] span:nth-child(2){opacity:0;}
-  .burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg);}
+  tbody td{padding:14px 24px;border-bottom:1px solid var(--line);font-size:14px;color:var(--ink);vertical-align:middle;}
+  tbody tr:nth-child(even){background:var(--gray-bg);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--accent-tint);}
+  .name-cell{font-weight:800;color:var(--ink);}
+  .sub{font-size:12.5px;color:#5b6270;margin-top:2px;}
+  .badge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;padding:4px 10px;border-radius:20px;border:1px solid transparent;}
+  .badge.in{background:var(--ok-tint);color:var(--ok);border-color:#bfe6cf;}
+  .badge.out{background:var(--gray-bg);color:#5b6270;border-color:var(--line);}
+  .actions-cell{display:flex;gap:8px;flex-wrap:wrap;}
+  .empty{padding:40px 24px;text-align:center;color:#8a8f99;font-size:14px;}
 
-  /* ---------- Menu Panel ---------- */
-  .menu-backdrop{
-    position:fixed;inset:0;background:rgba(4,24,46,.55);
-    opacity:0;visibility:hidden;transition:opacity .25s ease,visibility .25s ease;z-index:90;
+  /* Modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(4,24,46,.5);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-backdrop.open{display:flex;}
+  .modal{background:#fff;border-radius:8px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:30px;}
+  .modal h3{font-size:18px;font-weight:800;color:var(--ink);margin-bottom:20px;}
+  .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .modal-grid .full{grid-column:1/-1;}
+  .modal label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:5px;}
+  .modal input,.modal select{
+    width:100%;font-family:inherit;font-size:14px;color:var(--ink);padding:10px 12px;
+    border:1.5px solid var(--line);border-radius:4px;
   }
-  .menu-backdrop.open{opacity:1;visibility:visible;}
-  .menu-panel{
-    position:fixed;top:0;right:0;height:100%;width:340px;max-width:86vw;
-    background:#fff;z-index:95;box-shadow:-10px 0 32px rgba(0,0,0,.14);
-    transform:translateX(100%);transition:transform .3s ease;
-    padding:30px 30px 40px;display:flex;flex-direction:column;
-  }
-  .menu-panel.open{transform:translateX(0);}
-  .menu-panel-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:34px;}
-  .menu-panel-brand{font-weight:800;font-size:15px;color:var(--ink);}
-  .menu-close{background:none;border:none;font-size:26px;line-height:1;cursor:pointer;color:var(--ink);padding:4px 8px;}
-  .menu-close:focus-visible,.burger:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
-  .menu-links{list-style:none;display:flex;flex-direction:column;}
-  .menu-links a{
-    display:block;padding:18px 2px;font-size:21px;font-weight:700;color:var(--ink);
-    border-bottom:1px solid var(--line);transition:color .15s ease;
-  }
-  .menu-links a:hover{color:var(--accent);}
-  .menu-panel-foot{margin-top:auto;padding-top:24px;font-size:13px;color:#8a8f99;}
+  .modal input:focus,.modal select:focus{outline:none;border-color:var(--accent);}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:24px;}
+  .modal-error{font-size:13px;color:var(--accent);margin-top:10px;display:none;}
+  .modal-error.show{display:block;}
 
-  /* ---------- Hero ---------- */
-  .hero{
-    position:relative;
-    min-height:600px;
-    display:flex;align-items:flex-end;
-    overflow:hidden;
-    color:#fff;
+  @media (max-width:760px){
+    .stats{grid-template-columns:1fr;}
+    thead{display:none;}
+    tbody td{display:flex;justify-content:space-between;gap:12px;padding:10px 20px;border-bottom:none;}
+    tbody td::before{content:attr(data-label);font-weight:700;color:var(--ink);font-size:12px;}
+    tbody tr{border-bottom:1px solid var(--line);padding:8px 0;}
+    .modal-grid{grid-template-columns:1fr;}
   }
-  .hero-bg{
-    position:absolute;inset:0;z-index:-1;
-    background-image:
-      linear-gradient(0deg, rgba(10,6,8,.92) 0%, rgba(10,6,8,.55) 42%, rgba(10,6,8,.15) 70%),
-      url('https://soundprojekt.de/transforms/images/Referenzen/BOOT/_2560x1707_crop_center-center_none/653/Projekt-RK-Sealine-BOOT-2020-D%C3%BCsseldorf-StandPhotography-2615-Ir.webp');
-    background-size:cover;background-position:center 40%;
-  }
-  .hero-inner{padding:110px 0 64px;width:100%;}
-  .hero-tag{
-    display:inline-block;background:var(--accent);color:#fff;
-    font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-    padding:6px 12px;border-radius:2px;margin-bottom:22px;
-  }
-  .hero h1{
-    font-size:clamp(32px,4.6vw,52px);
-    font-weight:800;line-height:1.08;letter-spacing:-.02em;
-    max-width:700px;margin-bottom:22px;
-  }
-  .hero-note{font-size:15px;line-height:1.6;color:rgba(255,255,255,.82);max-width:480px;margin-bottom:34px;}
-  .hero-actions{display:flex;gap:14px;flex-wrap:wrap;}
-
-  /* ---------- Partners ---------- */
-  .partners{padding:46px 0;border-bottom:1px solid var(--line);}
-  .partners .eyebrow{display:block;text-align:center;margin-bottom:28px;color:#8a8f99;font-weight:700;}
-  .partner-row{display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:nowrap;}
-  img.partner{
-    height:45px;width:auto;max-width:180px;object-fit:contain;
-    filter:grayscale(1);opacity:.6;
-    transition:filter .2s ease,opacity .2s ease;
-  }
-  img.partner:hover{filter:grayscale(0);opacity:1;}
-
-  /* ---------- Details ---------- */
-  .details{background:var(--gray-bg);padding:100px 0;}
-  .details-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;}
-  .details-img{position:relative;overflow:hidden;border-radius:4px;border:1px solid var(--line);min-height:400px;}
-  .details-img img{width:100%;height:100%;object-fit:cover;min-height:400px;}
-  .details-card{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:4px;padding:44px 44px 24px;min-height:400px;}
-  .details-card h2{font-size:clamp(24px,2.6vw,32px);font-weight:800;color:var(--ink);letter-spacing:-.01em;margin:10px 0 30px;}
-  .fact{display:flex;gap:16px;padding:18px 0;border-bottom:1px solid var(--line);}
-  .fact:first-of-type{padding-top:0;}
-  .fact .ic{
-    width:36px;height:36px;flex:none;border-radius:50%;background:var(--accent-tint);color:var(--accent);
-    display:flex;align-items:center;justify-content:center;
-  }
-  .fact-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8f99;font-weight:700;margin-bottom:5px;}
-  .fact-value{font-size:16px;font-weight:700;color:var(--ink);}
-  .fact-sub{font-size:14px;color:var(--body);margin-top:2px;}
-  .details-actions{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap;}
-
-  /* ---------- Footer ---------- */
-  footer{background:var(--footer-bg);color:var(--footer-text);padding:76px 0 26px;}
-  .footer-grid{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:40px;padding-bottom:52px;}
-  footer .brand{color:#fff;margin-bottom:16px;}
-  .footer-desc{font-size:14px;line-height:1.7;max-width:320px;color:#8fa0b8;}
-  .footer-heading{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#fff;font-weight:700;margin-bottom:18px;}
-  .footer-links{list-style:none;display:flex;flex-direction:column;gap:12px;}
-  .footer-links a{font-size:14px;color:#aeb8c6;transition:color .15s ease;}
-  .footer-links a:hover{color:#fff;}
-  .footer-bottom{
-    border-top:1px solid rgba(255,255,255,.12);padding-top:24px;
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
-    font-size:13px;color:#728098;
-  }
-
-  /* ---------- Responsive ---------- */
-  @media (max-width:900px){
-    .details-grid,.footer-grid{grid-template-columns:1fr;gap:34px;}
-    .partner-row{gap:32px;}
-  }
-  @media (max-width:640px){
-    .wrap{padding:0 22px;}
-    .nav{height:66px;}
-    .nav-right .btn-primary{display:none;}
-    .hero-inner{padding:74px 30px 46px;}
-    .details{padding:64px 0;}
-    .details .wrap{padding:0 14px;}
-    .details-card{padding:24px 24px 14px;}
-    .partner-row{gap:28px;flex-wrap:wrap;}
-    img.partner{height:36px;max-width:144px;}
-  }
-  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important;}}
 
   /* ================= Barrierefreiheit: Zustände ================= */
   html.a11y-contrast body{background:#000 !important;color:#fff !important;}
@@ -264,155 +356,1036 @@
 
   @media (max-width:640px){
     .a11y-panel{right:12px;left:12px;width:auto;bottom:78px;}
-    .a11y-toggle{right:14px;bottom:14px;}
+    .a11y-toggle{right:14px;bottom:78px;}
     .cookie-banner{padding:18px 16px;}
+  }
+
+  /* ================= Mobile App-Navbar (unten) ================= */
+  .mobile-navbar{
+    display:none;
+    position:fixed;left:0;right:0;bottom:0;z-index:150;
+    background:#fff;border-top:1px solid var(--line);
+    padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
+    align-items:flex-end;justify-content:space-between;gap:2px;
+    box-shadow:0 -6px 18px rgba(0,0,0,.07);
+  }
+  .mnav-item{
+    flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;cursor:pointer;color:#8a8f99;
+    font-family:inherit;font-size:10px;font-weight:700;padding:7px 2px 5px;
+    border-radius:8px;transition:color .15s ease;
+  }
+  .mnav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+  .mnav-item svg{width:21px;height:21px;flex-shrink:0;}
+  .mnav-item.active{color:var(--ink);}
+  .mnav-item:active{background:var(--gray-bg);}
+
+  .mnav-item.mnav-scanner{
+    flex:0 0 60px;position:relative;top:-16px;
+    width:60px;height:60px;border-radius:50%;
+    background:var(--accent);color:#fff;
+    box-shadow:0 6px 16px rgba(181,21,43,.4);
+    justify-content:center;padding:0;
+  }
+  .mnav-item.mnav-scanner svg{width:26px;height:26px;}
+  .mnav-item.mnav-scanner:active{background:var(--accent-dark);}
+  .mnav-item.mnav-scanner.active{background:var(--accent-dark);color:#fff;}
+
+  @media (max-width:760px){
+    .mobile-navbar{display:flex;}
   }
 
 </style>
 </head>
 <body>
 
-<header>
-  <div class="wrap nav">
-    <a href="#top" class="brand">
+<div class="login-backdrop open" id="loginBackdrop">
+  <div class="login-box">
+    <div class="brand">
       <span class="mark"></span>
       Wirtschaftsforum Stralsund
-    </a>
-    <div class="nav-right">
-      <a href="teilnehmen.html" class="btn btn-primary">Teilnehmen</a>
-      <button class="burger" id="burgerBtn" aria-label="Menü öffnen" aria-expanded="false" aria-controls="mobileMenu"><span></span><span></span><span></span></button>
+    </div>
+    <h2>Admin-Login</h2>
+    <form id="loginForm">
+      <div class="login-field">
+        <label for="loginEmail">E-Mail</label>
+        <input type="email" id="loginEmail" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label for="loginPassword">Passwort</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <p class="login-error" id="loginError"></p>
+      <button type="submit" class="btn btn-primary login-submit">Anmelden</button>
+      <button type="button" class="login-forgot" id="showForgot">Passwort vergessen?</button>
+    </form>
+
+    <form id="forgotForm" style="display:none;">
+      <p class="login-forgot-hint">Bitte E-Mail-Adresse eingeben. Wir senden Ihnen einen Link zum Zurücksetzen des Passworts.</p>
+      <div class="login-field">
+        <label for="forgotEmail">E-Mail</label>
+        <input type="email" id="forgotEmail" autocomplete="username" required>
+      </div>
+      <p class="login-error" id="forgotError"></p>
+      <p class="login-success" id="forgotSuccess">Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde soeben ein Link zum Zurücksetzen gesendet. Bitte E-Mails (auch Spam-Ordner) prüfen.</p>
+      <button type="submit" class="btn btn-primary login-submit">Link senden</button>
+      <button type="button" class="login-forgot" id="backToLogin">Zurück zum Login</button>
+    </form>
+
+    <form id="resetForm" style="display:none;">
+      <p class="login-forgot-hint">Bitte neues Passwort vergeben (mindestens 8 Zeichen).</p>
+      <div class="login-field">
+        <label for="newPassword">Neues Passwort</label>
+        <input type="password" id="newPassword" autocomplete="new-password" minlength="8" required>
+      </div>
+      <p class="login-error" id="resetError"></p>
+      <button type="submit" class="btn btn-primary login-submit">Passwort speichern</button>
+    </form>
+  </div>
+</div>
+
+<header>
+  <div class="wrap header-inner">
+    <div class="brand">
+      <span class="mark"></span>
+      Wirtschaftsforum Stralsund
+      <small>Admin-Dashboard</small>
+    </div>
+    <div class="header-actions">
+      <a href="../index.html" class="btn btn-outline btn-sm">Zur Website</a>
+      <button class="btn btn-outline btn-sm" id="logoutBtn" style="display:none;">Abmelden</button>
     </div>
   </div>
 </header>
 
-<div class="menu-backdrop" id="menuBackdrop"></div>
-<nav class="menu-panel" id="mobileMenu" aria-label="Hauptmenü">
-  <div class="menu-panel-top">
-    <span class="menu-panel-brand">Menü</span>
-    <button class="menu-close" id="menuCloseBtn" aria-label="Menü schließen">&times;</button>
+<main class="wrap" id="appMain" style="display:none;">
+
+  <div class="quick-nav">
+    <button class="nav-btn active" id="navOverviewBtn" data-target="overviewPanel">
+      Übersicht
+    </button>
+    <button class="nav-btn" id="navParticipantsBtn" data-target="participantsPanel">
+      Teilnehmendenliste <span class="nav-count" id="navParticipantsCount">0</span>
+    </button>
+    <button class="nav-btn" id="navCancellationsBtn" data-target="cancellationsPanel">
+      Absagenliste <span class="nav-count" id="navCancellationsCount">0</span>
+    </button>
+    <button class="nav-btn" id="navWaitlistBtn" data-target="waitlistPanel">
+      Warteliste <span class="nav-count" id="navWaitlistCount">0</span>
+    </button>
+    <button class="nav-btn nav-btn-scanner" id="navScannerBtn" data-target="scannerPanel">
+      Scanner
+    </button>
   </div>
-  <ul class="menu-links">
-    <li><a href="teilnehmen.html">Teilnehmen</a></li>
-    <li><a href="absagen.html">Absagen</a></li>
-    <li><a href="kontakt.html">Kontakt</a></li>
-  </ul>
-  <div class="menu-panel-foot">Wirtschaftsforum Stralsund · 05. November 2026</div>
-</nav>
 
-<section class="hero" id="top">
-  <div class="hero-bg"></div>
-  <div class="wrap hero-inner">
-    <span class="hero-tag">05. November 2026 · Stralsund</span>
-    <h1>Einladung zum Wirtschaftsforum Stralsund</h1>
-    <p class="hero-note">Für eine bessere Planung bitten wir Sie, auf „Teilnehmen“ oder „Absagen“ zu klicken. Die Plätze sind streng begrenzt.</p>
-    <div class="hero-actions">
-      <a href="teilnehmen.html" class="btn btn-primary">Teilnehmen <span class="btn-arrow">→</span></a>
-      <a href="absagen.html" class="btn btn-outline-light">Absagen</a>
+  <section class="panel" id="overviewPanel">
+    <div class="panel-head">
+      <h2>Übersicht</h2>
     </div>
-  </div>
-</section>
-
-<section class="partners">
-  <div class="wrap">
-    <span class="eyebrow">Unsere starken regionalen Partner</span>
-    <div class="partner-row">
-      <img class="partner" src="https://service.stralsund.de/documents/81629/82969/HST-Nebenversion-CMYK.png" alt="Hansestadt Stralsund">
-      <img class="partner" src="https://partners-cdn.studysmarter.de/media/uploads/2026/07/9095d6433b0c1a91/soundprojekt.de.png" alt="Sound Projekt">
-      <img class="partner" src="https://gruendungswerft.com/wp-content/uploads/2026/05/image-2-1024x424.png" alt="MakerPORT">
-    </div>
-  </div>
-</section>
-
-<section class="details" id="details">
-  <div class="wrap details-grid">
-    <div class="details-img">
-      <img src="https://www.digitalesmv.de/sites/default/files/2024-12/2_0.png" alt="Team beim Aufbau der Veranstaltungstechnik">
-    </div>
-    <div class="details-card">
-      <span class="eyebrow">Veranstaltungsdetails</span>
-      <h2>Wirtschaftsforum Stralsund 2026</h2>
-
-      <div class="fact">
-        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg></span>
-        <div><div class="fact-label">Datum</div><div class="fact-value">05. November 2026</div></div>
-      </div>
-
-      <div class="fact">
-        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-        <div><div class="fact-label">Uhrzeit</div><div class="fact-value">18:00 Uhr</div></div>
-      </div>
-
-      <div class="fact">
-        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span>
-        <div>
-          <div class="fact-label">Ort &amp; Adresse</div>
-          <div class="fact-value">Sound Projekt Veranstaltungstechnik GmbH</div>
-          <div class="fact-sub">Zunftstraße 5 · 18437 Stralsund</div>
+    <div class="overview-body">
+      <div class="stats">
+        <div class="stat-card accent">
+          <div class="label">Anmeldungen</div>
+          <div class="value" id="statParticipants">–</div>
+        </div>
+        <div class="stat-card ok">
+          <div class="label">Eingecheckt</div>
+          <div class="value" id="statCheckedIn">–</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Absagen</div>
+          <div class="value" id="statCancellations">–</div>
         </div>
       </div>
 
-      <div class="details-actions">
-        <a href="teilnehmen.html" class="btn btn-primary">Teilnehmen</a>
-        <a href="absagen.html" class="btn btn-outline-dark">Absagen</a>
+      <div class="overview-grid">
+        <div class="overview-card">
+          <h3>Auslastung</h3>
+          <div class="capacity-bar-track">
+            <div class="capacity-bar-fill" id="capacityFill"></div>
+          </div>
+          <div class="capacity-label" id="capacityLabel">–</div>
+          <div class="capacity-sub" id="capacitySub"></div>
+        </div>
+        <div class="overview-card">
+          <h3>Neueste Anmeldungen</h3>
+          <ul class="latest-list" id="latestList"></ul>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<footer>
-  <div class="wrap">
-    <div class="footer-grid">
-      <div>
-        <div class="brand"><span class="mark"></span>Wirtschaftsforum Stralsund</div>
-        <p class="footer-desc">Das Wirtschaftsforum Stralsund 2026 ist eine Initiative der Hansestadt Stralsund mit Unterstützung des MakerPORT Stralsund.</p>
-      </div>
-      <div>
-        <div class="footer-heading">Navigation</div>
-        <ul class="footer-links"><li><a href="teilnehmen.html">Teilnehmen</a></li><li><a href="absagen.html">Absagen</a></li></ul>
-      </div>
-      <div>
-        <div class="footer-heading">Rechtliches</div>
-        <ul class="footer-links"><li><a href="impressum.html">Impressum</a></li><li><a href="datenschutz.html">Datenschutzerklärung</a></li><li><a href="kontakt.html">Kontakt</a></li></ul>
+  <section class="panel collapsed" id="participantsPanel">
+    <div class="panel-head">
+      <h2>Teilnehmendenliste <span class="count" id="participantsCount"></span></h2>
+      <div class="panel-head-actions">
+        <button class="btn btn-outline btn-sm" id="exportParticipantsBtn">⭳ Als Excel exportieren</button>
+        <button class="btn btn-primary btn-sm" id="addPersonBtn">+ Person hinzufügen</button>
       </div>
     </div>
-    <div class="footer-bottom">
-      <span>© 2026 Wirtschaftsforum Stralsund. Alle Rechte vorbehalten.</span>
-      <span>Hansestadt Stralsund</span>
+    <div class="panel-search">
+      <input type="text" id="participantsSearch" placeholder="Suche nach Name, E-Mail oder Firma …">
     </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Firma / Funktion</th>
+          <th>Kontakt</th>
+          <th>Status</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="participantsBody"></tbody>
+    </table>
+    <div class="empty" id="participantsEmpty" style="display:none;">Noch keine Anmeldungen.</div>
+  </section>
+
+  <section class="panel collapsed" id="cancellationsPanel">
+    <div class="panel-head">
+      <h2>Absagenliste <span class="count" id="cancellationsCount"></span></h2>
+      <div class="panel-head-actions">
+        <button class="btn btn-outline btn-sm" id="exportCancellationsBtn">⭳ Als Excel exportieren</button>
+      </div>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="cancellationsSearch" placeholder="Suche nach Name oder E-Mail …">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>E-Mail</th>
+          <th>Abgesagt am</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="cancellationsBody"></tbody>
+    </table>
+    <div class="empty" id="cancellationsEmpty" style="display:none;">Noch keine Absagen.</div>
+  </section>
+
+  <section class="panel collapsed" id="waitlistPanel">
+    <div class="panel-head">
+      <h2>Warteliste <span class="count" id="waitlistCount"></span></h2>
+      <div class="panel-head-actions">
+        <button class="btn btn-outline btn-sm" id="exportWaitlistBtn">⭳ Als Excel exportieren</button>
+      </div>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="waitlistSearch" placeholder="Suche nach Name, E-Mail oder Firma …">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Firma</th>
+          <th>Kontakt</th>
+          <th>Auf Warteliste seit</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="waitlistBody"></tbody>
+    </table>
+    <div class="empty" id="waitlistEmpty" style="display:none;">Die Warteliste ist aktuell leer.</div>
+  </section>
+
+  <section class="panel collapsed" id="scannerPanel">
+    <div class="panel-head">
+      <h2>QR-Scanner Check-in</h2>
+      <div class="panel-head-actions">
+        <button class="btn btn-outline btn-sm" id="scannerFullscreenBtn" style="display:none;">⛶ Vollbild</button>
+        <button class="btn btn-primary btn-sm" id="scannerStartBtn">Kamera starten</button>
+        <button class="btn btn-outline btn-sm" id="scannerStopBtn" style="display:none;">Kamera stoppen</button>
+      </div>
+    </div>
+    <div id="scannerContainer" style="padding:24px;">
+      <button class="scanner-fs-exit" id="scannerFsExitBtn" aria-label="Vollbild beenden">✕</button>
+      <div id="scannerReader" style="max-width:480px;margin:0 auto;border-radius:8px;overflow:hidden;border:1px solid var(--line);"></div>
+      <div id="scannerResult" style="max-width:480px;margin:20px auto 0;text-align:center;"></div>
+      <p id="scannerHint" style="max-width:480px;margin:16px auto 0;font-size:12.5px;color:#8a8f99;text-align:center;">
+        QR-Code aus der Bestätigungsmail vor die Kamera halten. Der Check-in erfolgt automatisch,
+        Mehrfach-Scans desselben Codes werden 5 Sekunden lang ignoriert.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<!-- Modal: Person hinzufügen -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h3>Person hinzufügen</h3>
+    <form id="addPersonForm">
+      <div class="modal-grid">
+        <div>
+          <label for="m_anrede">Anrede</label>
+          <select id="m_anrede" name="anrede">
+            <option value="">–</option>
+            <option value="Herr">Herr</option>
+            <option value="Frau">Frau</option>
+            <option value="Divers">Divers</option>
+          </select>
+        </div>
+        <div>
+          <label for="m_titel">Titel</label>
+          <input type="text" id="m_titel" name="titel">
+        </div>
+        <div>
+          <label for="m_vorname">Vorname *</label>
+          <input type="text" id="m_vorname" name="vorname" required>
+        </div>
+        <div>
+          <label for="m_nachname">Nachname *</label>
+          <input type="text" id="m_nachname" name="nachname" required>
+        </div>
+        <div>
+          <label for="m_firma">Firma / Institut</label>
+          <input type="text" id="m_firma" name="firma">
+        </div>
+        <div>
+          <label for="m_funktion">Funktion</label>
+          <input type="text" id="m_funktion" name="funktion">
+        </div>
+        <div class="full">
+          <label for="m_strasse">Straße und Hausnummer</label>
+          <input type="text" id="m_strasse" name="strasse">
+        </div>
+        <div>
+          <label for="m_stadt">Stadt</label>
+          <input type="text" id="m_stadt" name="stadt">
+        </div>
+        <div>
+          <label for="m_plz">PLZ</label>
+          <input type="text" id="m_plz" name="plz">
+        </div>
+        <div>
+          <label for="m_email">E-Mail *</label>
+          <input type="email" id="m_email" name="email" required>
+        </div>
+        <div>
+          <label for="m_telefon">Telefon</label>
+          <input type="tel" id="m_telefon" name="telefon">
+        </div>
+      </div>
+      <p class="modal-error" id="modalError"></p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="modalCancelBtn">Abbrechen</button>
+        <button type="submit" class="btn btn-primary">Hinzufügen</button>
+      </div>
+    </form>
   </div>
-</footer>
+</div>
+
 <script>
-  (function(){
-    var burger = document.getElementById('burgerBtn');
-    var closeBtn = document.getElementById('menuCloseBtn');
-    var panel = document.getElementById('mobileMenu');
-    var backdrop = document.getElementById('menuBackdrop');
+  /* ============================================================
+     DATA LAYER – hier später gegen Supabase austauschen
+     ============================================================
+     Jede Funktion unten entspricht 1:1 einer künftigen Supabase-Query.
+     Die Kommentare zeigen jeweils, wie der Supabase-Aufruf aussehen wird.
+  ============================================================ */
 
-    function openMenu(){
-      panel.classList.add('open');
-      backdrop.classList.add('open');
-      burger.setAttribute('aria-expanded','true');
-      document.body.style.overflow='hidden';
-      closeBtn.focus();
+  /* ============================================================
+     DATA LAYER – echte Supabase-Anbindung
+     ============================================================
+     Die Tabellen nutzen snake_case-Spalten (checked_in, created_at),
+     die UI-Logik weiter unten arbeitet mit camelCase (checkedIn, createdAt).
+     Die map...FromDb()-Helfer übersetzen zwischen beiden Welten.
+  ============================================================ */
+
+  function mapParticipantFromDb(row){
+    return {
+      id: row.id, anrede: row.anrede || '', titel: row.titel || '',
+      vorname: row.vorname, nachname: row.nachname, firma: row.firma || '',
+      funktion: row.funktion || '', strasse: row.strasse || '', stadt: row.stadt || '',
+      plz: row.plz || '', email: row.email, telefon: row.telefon || '',
+      checkedIn: row.checked_in, createdAt: row.created_at
+    };
+  }
+  function mapCancellationFromDb(row){
+    return { id: row.id, vorname: row.vorname || '', nachname: row.nachname || '', email: row.email, createdAt: row.created_at };
+  }
+  function mapWaitlistFromDb(row){
+    return { id: row.id, vorname: row.vorname, nachname: row.nachname, firma: row.firma || '', email: row.email, telefon: row.telefon || '', createdAt: row.created_at };
+  }
+
+  // Maximale Teilnehmerzahl der Veranstaltung – für das Auslastungsdiagramm.
+  // Bei Bedarf anpassen.
+  const EVENT_CAPACITY = 150;
+
+  async function fetchStats(){
+    const [pRes, cInRes, cancRes] = await Promise.all([
+      supabase.from('participants').select('*', { count:'exact', head:true }),
+      supabase.from('participants').select('*', { count:'exact', head:true }).eq('checked_in', true),
+      supabase.from('cancellations').select('*', { count:'exact', head:true })
+    ]);
+    return {
+      participants: pRes.count || 0,
+      checkedIn: cInRes.count || 0,
+      cancellations: cancRes.count || 0
+    };
+  }
+
+  async function fetchParticipants(){
+    const { data, error } = await supabase.from('participants').select('*').order('nachname');
+    if (error) { console.error(error); return []; }
+    return data.map(mapParticipantFromDb);
+  }
+
+  async function fetchCancellations(){
+    const { data, error } = await supabase.from('cancellations').select('*').order('created_at', { ascending:false });
+    if (error) { console.error(error); return []; }
+    return data.map(mapCancellationFromDb);
+  }
+
+  async function fetchWaitlist(){
+    const { data, error } = await supabase.from('waitlist').select('*').order('created_at');
+    if (error) { console.error(error); return []; }
+    return data.map(mapWaitlistFromDb);
+  }
+
+  async function addParticipant(data){
+    const { error } = await supabase.from('participants').insert([{
+      anrede: data.anrede || null, titel: data.titel || null,
+      vorname: data.vorname, nachname: data.nachname,
+      firma: data.firma || null, funktion: data.funktion || null,
+      strasse: data.strasse || null, stadt: data.stadt || null, plz: data.plz || null,
+      email: data.email, telefon: data.telefon || null
+    }]);
+    if (error) {
+      if (error.code === '23505') throw new Error('Für diese E-Mail-Adresse liegt bereits eine Anmeldung vor.');
+      throw new Error(error.message);
     }
-    function closeMenu(){
-      panel.classList.remove('open');
-      backdrop.classList.remove('open');
-      burger.setAttribute('aria-expanded','false');
-      document.body.style.overflow='';
-      burger.focus();
+  }
+
+  async function toggleCheckin(id){
+    const { data: row, error: selErr } = await supabase.from('participants').select('checked_in').eq('id', id).single();
+    if (selErr) throw new Error(selErr.message);
+    const { error } = await supabase.from('participants').update({ checked_in: !row.checked_in }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  // Fuer den QR-Scanner: liefert Status + Name zurueck, statt nur zu togglen.
+  async function checkinByParticipantId(id){
+    const { data: row, error: selErr } = await supabase
+      .from('participants')
+      .select('vorname,nachname,checked_in')
+      .eq('id', id)
+      .maybeSingle();
+    if (selErr) throw new Error(selErr.message);
+    if (!row) return { found:false };
+    if (row.checked_in) return { found:true, already:true, name: row.vorname + ' ' + row.nachname };
+    const { error } = await supabase.from('participants').update({ checked_in: true }).eq('id', id);
+    if (error) throw new Error(error.message);
+    return { found:true, already:false, name: row.vorname + ' ' + row.nachname };
+  }
+
+  async function cancelParticipant(id){
+    const { data: p, error: selErr } = await supabase.from('participants').select('vorname,nachname,email').eq('id', id).single();
+    if (selErr) throw new Error(selErr.message);
+    const { error: insErr } = await supabase.from('cancellations').insert([{ vorname: p.vorname, nachname: p.nachname, email: p.email }]);
+    if (insErr) throw new Error(insErr.message);
+    const { error: delErr } = await supabase.from('participants').delete().eq('id', id);
+    if (delErr) throw new Error(delErr.message);
+  }
+
+  async function deleteCancellation(id){
+    const { error } = await supabase.from('cancellations').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  async function promoteFromWaitlist(id){
+    const { data: w, error: selErr } = await supabase.from('waitlist').select('*').eq('id', id).single();
+    if (selErr) throw new Error(selErr.message);
+    const { error: insErr } = await supabase.from('participants').insert([{
+      vorname: w.vorname, nachname: w.nachname, firma: w.firma, email: w.email, telefon: w.telefon
+    }]);
+    // 23505 = für diese E-Mail existiert schon eine Anmeldung – Wartelisten-Eintrag trotzdem entfernen
+    if (insErr && insErr.code !== '23505') throw new Error(insErr.message);
+    const { error: delErr } = await supabase.from('waitlist').delete().eq('id', id);
+    if (delErr) throw new Error(delErr.message);
+  }
+
+  async function deleteWaitlistEntry(id){
+    const { error } = await supabase.from('waitlist').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  /* ============================================================
+     UI-LOGIK – ab hier normalerweise nichts anpassen
+  ============================================================ */
+
+  let currentParticipants = [];
+  let currentCancellations = [];
+  let currentWaitlist = [];
+  let participantsSearchTerm = '';
+  let cancellationsSearchTerm = '';
+  let waitlistSearchTerm = '';
+
+  async function loadAll(){
+    const [stats, plist, clist, wlist] = await Promise.all([
+      fetchStats(), fetchParticipants(), fetchCancellations(), fetchWaitlist()
+    ]);
+    currentParticipants = plist;
+    currentCancellations = clist;
+    currentWaitlist = wlist;
+    renderStats(stats);
+    renderParticipants();
+    renderCancellations();
+    renderWaitlist();
+    renderCapacity();
+    renderLatestRegistrations();
+  }
+
+  function renderCapacity(){
+    const count = currentParticipants.length;
+    const pct = Math.min(100, Math.round((count / EVENT_CAPACITY) * 100));
+    const fill = document.getElementById('capacityFill');
+    fill.style.width = pct + '%';
+    fill.style.background = pct >= 90
+      ? 'linear-gradient(90deg, var(--accent), var(--accent-dark))'
+      : (pct >= 60 ? 'linear-gradient(90deg, #d98a1f, #b5691a)' : 'linear-gradient(90deg, var(--ok), #166b3a)');
+    document.getElementById('capacityLabel').textContent = pct + '% belegt';
+    const free = Math.max(0, EVENT_CAPACITY - count);
+    document.getElementById('capacitySub').textContent =
+      count + ' von ' + EVENT_CAPACITY + ' Plätzen angemeldet · ' + free + ' Plätze frei';
+  }
+
+  function renderLatestRegistrations(){
+    const list = [...currentParticipants]
+      .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+    const el = document.getElementById('latestList');
+    if(!list.length){
+      el.innerHTML = '<li class="latest-empty">Noch keine Anmeldungen.</li>';
+      return;
     }
-    burger.addEventListener('click', function(){
-      panel.classList.contains('open') ? closeMenu() : openMenu();
+    el.innerHTML = list.map(p => `
+      <li>
+        <div>
+          <div class="latest-name">${esc(p.vorname)} ${esc(p.nachname)}</div>
+          <div class="latest-firma">${esc(p.firma) || '–'}</div>
+        </div>
+        <div class="latest-date">${new Date(p.createdAt).toLocaleDateString('de-DE')}</div>
+      </li>
+    `).join('');
+  }
+
+  function renderStats(s){
+    document.getElementById('statParticipants').textContent = s.participants;
+    document.getElementById('statCheckedIn').textContent = s.checkedIn;
+    document.getElementById('statCancellations').textContent = s.cancellations;
+  }
+
+  function esc(str){
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  function renderParticipants(){
+    const term = participantsSearchTerm.trim().toLowerCase();
+    const list = !term ? currentParticipants : currentParticipants.filter(p => {
+      const haystack = [p.anrede, p.titel, p.vorname, p.nachname, p.email, p.firma].join(' ').toLowerCase();
+      return haystack.includes(term);
     });
-    closeBtn.addEventListener('click', closeMenu);
-    backdrop.addEventListener('click', closeMenu);
-    document.addEventListener('keydown', function(e){
-      if(e.key === 'Escape' && panel.classList.contains('open')) closeMenu();
+
+    const body = document.getElementById('participantsBody');
+    const empty = document.getElementById('participantsEmpty');
+    document.getElementById('participantsCount').textContent = '(' + list.length + ' von ' + currentParticipants.length + ')';
+    document.getElementById('navParticipantsCount').textContent = currentParticipants.length;
+
+    if(!list.length){
+      body.innerHTML='';
+      empty.style.display='block';
+      empty.textContent = currentParticipants.length ? 'Keine Treffer für diese Suche.' : 'Noch keine Anmeldungen.';
+      return;
+    }
+    empty.style.display='none';
+    body.innerHTML = list.map(p => `
+      <tr>
+        <td data-label="Name">
+          <div class="name-cell">${esc(p.titel)} ${esc(p.vorname)} ${esc(p.nachname)}</div>
+        </td>
+        <td data-label="Firma / Funktion">
+          ${esc(p.firma) || '–'}<div class="sub">${esc(p.funktion) || ''}</div>
+        </td>
+        <td data-label="Kontakt">
+          ${esc(p.email)}<div class="sub">${esc(p.telefon) || ''}</div>
+        </td>
+        <td data-label="Status">
+          <span class="badge ${p.checkedIn ? 'in':'out'}">${p.checkedIn ? '✓ Eingecheckt' : 'Nicht eingecheckt'}</span>
+        </td>
+        <td data-label="Aktionen">
+          <div class="actions-cell">
+            <button class="btn btn-sm ${p.checkedIn ? 'btn-outline' : 'btn-ok'}" data-checkin="${p.id}">
+              ${p.checkedIn ? 'Check-in zurücksetzen' : 'Check-in'}
+            </button>
+            <button class="btn btn-sm btn-danger" data-cancel="${p.id}">Absagen</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderCancellations(){
+    const term = cancellationsSearchTerm.trim().toLowerCase();
+    const list = !term ? currentCancellations : currentCancellations.filter(c => {
+      const haystack = [c.vorname, c.nachname, c.email].join(' ').toLowerCase();
+      return haystack.includes(term);
     });
-  })();
+
+    const body = document.getElementById('cancellationsBody');
+    const empty = document.getElementById('cancellationsEmpty');
+    document.getElementById('cancellationsCount').textContent = '(' + list.length + ' von ' + currentCancellations.length + ')';
+    document.getElementById('navCancellationsCount').textContent = currentCancellations.length;
+
+    if(!list.length){
+      body.innerHTML='';
+      empty.style.display='block';
+      empty.textContent = currentCancellations.length ? 'Keine Treffer für diese Suche.' : 'Noch keine Absagen.';
+      return;
+    }
+    empty.style.display='none';
+    body.innerHTML = list.map(c => `
+      <tr>
+        <td data-label="Name">${esc(c.vorname)} ${esc(c.nachname)}</td>
+        <td data-label="E-Mail">${esc(c.email)}</td>
+        <td data-label="Abgesagt am">${new Date(c.createdAt).toLocaleString('de-DE')}</td>
+        <td data-label="Aktionen">
+          <button class="btn btn-sm btn-outline" data-delcancel="${c.id}">Entfernen</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderWaitlist(){
+    const term = waitlistSearchTerm.trim().toLowerCase();
+    const list = !term ? currentWaitlist : currentWaitlist.filter(w => {
+      const haystack = [w.vorname, w.nachname, w.email, w.firma].join(' ').toLowerCase();
+      return haystack.includes(term);
+    });
+
+    const body = document.getElementById('waitlistBody');
+    const empty = document.getElementById('waitlistEmpty');
+    document.getElementById('waitlistCount').textContent = '(' + list.length + ' von ' + currentWaitlist.length + ')';
+    document.getElementById('navWaitlistCount').textContent = currentWaitlist.length;
+
+    if(!list.length){
+      body.innerHTML='';
+      empty.style.display='block';
+      empty.textContent = currentWaitlist.length ? 'Keine Treffer für diese Suche.' : 'Die Warteliste ist aktuell leer.';
+      return;
+    }
+    empty.style.display='none';
+    body.innerHTML = list.map(w => `
+      <tr>
+        <td data-label="Name"><div class="name-cell">${esc(w.vorname)} ${esc(w.nachname)}</div></td>
+        <td data-label="Firma">${esc(w.firma) || '–'}</td>
+        <td data-label="Kontakt">${esc(w.email)}<div class="sub">${esc(w.telefon) || ''}</div></td>
+        <td data-label="Auf Warteliste seit">${new Date(w.createdAt).toLocaleDateString('de-DE')}</td>
+        <td data-label="Aktionen">
+          <div class="actions-cell">
+            <button class="btn btn-sm btn-ok" data-promote="${w.id}">Zu Teilnehmenden</button>
+            <button class="btn btn-sm btn-danger" data-delwaitlist="${w.id}">Entfernen</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('participantsSearch').addEventListener('input', (e) => {
+    participantsSearchTerm = e.target.value;
+    renderParticipants();
+  });
+  document.getElementById('cancellationsSearch').addEventListener('input', (e) => {
+    cancellationsSearchTerm = e.target.value;
+    renderCancellations();
+  });
+  document.getElementById('waitlistSearch').addEventListener('input', (e) => {
+    waitlistSearchTerm = e.target.value;
+    renderWaitlist();
+  });
+
+  // Navigation: Top-Quick-Nav UND untere App-Navbar steuern gemeinsam dieselben Panels
+  function activatePanel(targetId){
+    const panel = document.getElementById(targetId);
+    if(!panel) return;
+
+    // alle Panels schließen und alle Buttons (oben + unten) deaktivieren
+    document.querySelectorAll('.panel').forEach(p => p.classList.add('collapsed'));
+    document.querySelectorAll('.nav-btn, .mnav-item').forEach(b => b.classList.remove('active'));
+
+    // Scanner-Kamera stoppen, wenn der Scanner-Tab verlassen wird
+    if(targetId !== 'scannerPanel' && typeof qrScanner !== 'undefined' && qrScanner){
+      qrScanner.stop().then(() => { qrScanner.clear(); qrScanner = null; }).catch(() => {});
+      document.getElementById('scannerStartBtn').style.display = '';
+      document.getElementById('scannerStopBtn').style.display = 'none';
+      document.getElementById('scannerFullscreenBtn').style.display = 'none';
+      if(document.exitFullscreen && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      else if(document.webkitExitFullscreen && document.webkitFullscreenElement) document.webkitExitFullscreen();
+    }
+
+    panel.classList.remove('collapsed');
+    document.querySelectorAll('[data-target="' + targetId + '"]').forEach(b => b.classList.add('active'));
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  document.querySelectorAll('.nav-btn, .mnav-item').forEach(btn => {
+    btn.addEventListener('click', () => activatePanel(btn.getAttribute('data-target')));
+  });
+
+  // Excel-Export
+  function exportToExcel(rows, filename, sheetName){
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, filename);
+  }
+
+  document.getElementById('exportParticipantsBtn').addEventListener('click', () => {
+    const rows = currentParticipants.map(p => ({
+      'Titel': p.titel, 'Vorname': p.vorname, 'Nachname': p.nachname,
+      'Firma / Institut': p.firma, 'Funktion': p.funktion,
+      'Straße und Hausnummer': p.strasse, 'Stadt': p.stadt, 'PLZ': p.plz,
+      'E-Mail': p.email, 'Telefon': p.telefon,
+      'Eingecheckt': p.checkedIn ? 'Ja' : 'Nein',
+      'Angemeldet am': new Date(p.createdAt).toLocaleString('de-DE')
+    }));
+    exportToExcel(rows, 'teilnehmerliste.xlsx', 'Teilnehmende');
+  });
+
+  document.getElementById('exportCancellationsBtn').addEventListener('click', () => {
+    const rows = currentCancellations.map(c => ({
+      'Vorname': c.vorname, 'Nachname': c.nachname, 'E-Mail': c.email,
+      'Abgesagt am': new Date(c.createdAt).toLocaleString('de-DE')
+    }));
+    exportToExcel(rows, 'absagenliste.xlsx', 'Absagen');
+  });
+
+  document.getElementById('exportWaitlistBtn').addEventListener('click', () => {
+    const rows = currentWaitlist.map(w => ({
+      'Vorname': w.vorname, 'Nachname': w.nachname, 'Firma': w.firma,
+      'E-Mail': w.email, 'Telefon': w.telefon,
+      'Auf Warteliste seit': new Date(w.createdAt).toLocaleString('de-DE')
+    }));
+    exportToExcel(rows, 'warteliste.xlsx', 'Warteliste');
+  });
+
+  document.addEventListener('click', async (e) => {
+    const checkinId = e.target.getAttribute('data-checkin');
+    const cancelId = e.target.getAttribute('data-cancel');
+    const delCancelId = e.target.getAttribute('data-delcancel');
+    const promoteId = e.target.getAttribute('data-promote');
+    const delWaitlistId = e.target.getAttribute('data-delwaitlist');
+
+    try{
+      if(checkinId){
+        await toggleCheckin(checkinId);
+        loadAll();
+      }
+      if(cancelId){
+        if(confirm('Diese Person wirklich absagen? Sie wird von der Teilnehmendenliste in die Absagenliste verschoben.')){
+          await cancelParticipant(cancelId);
+          loadAll();
+        }
+      }
+      if(delCancelId){
+        if(confirm('Diesen Absage-Eintrag entfernen?')){
+          await deleteCancellation(delCancelId);
+          loadAll();
+        }
+      }
+      if(promoteId){
+        if(confirm('Diese Person von der Warteliste zur Teilnehmendenliste verschieben?')){
+          await promoteFromWaitlist(promoteId);
+          loadAll();
+        }
+      }
+      if(delWaitlistId){
+        if(confirm('Diesen Wartelisten-Eintrag entfernen?')){
+          await deleteWaitlistEntry(delWaitlistId);
+          loadAll();
+        }
+      }
+    }catch(err){
+      alert('Ein Fehler ist aufgetreten: ' + err.message);
+    }
+  });
+
+  // Modal: Person hinzufügen
+  const modalBackdrop = document.getElementById('modalBackdrop');
+  const addPersonForm = document.getElementById('addPersonForm');
+  const modalError = document.getElementById('modalError');
+
+  document.getElementById('addPersonBtn').addEventListener('click', () => {
+    addPersonForm.reset();
+    modalError.classList.remove('show');
+    modalBackdrop.classList.add('open');
+  });
+  document.getElementById('modalCancelBtn').addEventListener('click', () => {
+    modalBackdrop.classList.remove('open');
+  });
+  modalBackdrop.addEventListener('click', (e) => {
+    if(e.target === modalBackdrop) modalBackdrop.classList.remove('open');
+  });
+
+  addPersonForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(addPersonForm).entries());
+    try{
+      await addParticipant(data);
+      modalBackdrop.classList.remove('open');
+      loadAll();
+    }catch(err){
+      modalError.textContent = err.message || 'Ein Fehler ist aufgetreten.';
+      modalError.classList.add('show');
+    }
+  });
+
+  /* ============================================================
+     QR-SCANNER – Check-in per Kamera
+  ============================================================ */
+
+  let qrScanner = null;
+  let lastScanCode = null;
+  let lastScanTime = 0;
+
+  function showScanFeedback(type, mainText, subText){
+    const el = document.getElementById('scannerResult');
+    el.innerHTML = `<div class="scan-feedback ${type}">
+      ${mainText}
+      ${subText ? '<span class="sub">' + subText + '</span>' : ''}
+    </div>`;
+  }
+
+  async function handleScanSuccess(decodedText){
+    const now = Date.now();
+    if(decodedText === lastScanCode && (now - lastScanTime) < 5000){
+      return; // gleicher Code innerhalb von 5s -> ignorieren
+    }
+    lastScanCode = decodedText;
+    lastScanTime = now;
+
+    if(!decodedText.startsWith('WFS-CHECKIN:')){
+      showScanFeedback('err', '✕ Unbekannter QR-Code', 'Dieser Code gehört nicht zum Wirtschaftsforum.');
+      return;
+    }
+    const id = decodedText.replace('WFS-CHECKIN:', '').trim();
+
+    try{
+      const result = await checkinByParticipantId(id);
+      if(!result.found){
+        showScanFeedback('err', '✕ Nicht gefunden', 'Keine Anmeldung mit diesem Code gefunden.');
+        return;
+      }
+      if(result.already){
+        showScanFeedback('warn', '⚠ Bereits eingecheckt', result.name);
+        return;
+      }
+      showScanFeedback('ok', '✓ Eingecheckt', result.name);
+      loadAll();
+    }catch(err){
+      showScanFeedback('err', '✕ Fehler', err.message);
+    }
+  }
+
+  document.getElementById('scannerStartBtn').addEventListener('click', () => {
+    if(qrScanner) return;
+    qrScanner = new Html5Qrcode('scannerReader');
+    document.getElementById('scannerResult').innerHTML = '';
+    const qrBoxSize = Math.max(240, Math.min(380, Math.floor(Math.min(window.innerWidth, window.innerHeight) * 0.6)));
+    qrScanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: qrBoxSize },
+      handleScanSuccess,
+      () => {} // laufende Frames ohne erkannten Code -> ignorieren
+    ).then(() => {
+      document.getElementById('scannerStartBtn').style.display = 'none';
+      document.getElementById('scannerStopBtn').style.display = '';
+      document.getElementById('scannerFullscreenBtn').style.display = '';
+    }).catch((err) => {
+      showScanFeedback('err', '✕ Kamera konnte nicht gestartet werden', 'Bitte Kamerazugriff im Browser erlauben. (' + err + ')');
+    });
+  });
+
+  document.getElementById('scannerStopBtn').addEventListener('click', () => {
+    if(!qrScanner) return;
+    qrScanner.stop().then(() => {
+      qrScanner.clear();
+      qrScanner = null;
+      document.getElementById('scannerStartBtn').style.display = '';
+      document.getElementById('scannerStopBtn').style.display = 'none';
+      document.getElementById('scannerFullscreenBtn').style.display = 'none';
+      exitScannerFullscreen();
+    });
+  });
+
+  // ===== Vollbild-Modus =====
+  const scannerContainerEl = document.getElementById('scannerContainer');
+
+  function isInScannerFullscreen(){
+    return (document.fullscreenElement || document.webkitFullscreenElement) === scannerContainerEl;
+  }
+
+  function enterScannerFullscreen(){
+    if(scannerContainerEl.requestFullscreen){
+      scannerContainerEl.requestFullscreen().catch(() => {});
+    } else if(scannerContainerEl.webkitRequestFullscreen){
+      scannerContainerEl.webkitRequestFullscreen();
+    }
+  }
+
+  function exitScannerFullscreen(){
+    if(!isInScannerFullscreen()) return;
+    if(document.exitFullscreen){
+      document.exitFullscreen().catch(() => {});
+    } else if(document.webkitExitFullscreen){
+      document.webkitExitFullscreen();
+    }
+  }
+
+  document.getElementById('scannerFullscreenBtn').addEventListener('click', () => {
+    isInScannerFullscreen() ? exitScannerFullscreen() : enterScannerFullscreen();
+  });
+  document.getElementById('scannerFsExitBtn').addEventListener('click', exitScannerFullscreen);
+
+  function updateFullscreenBtnLabel(){
+    const btn = document.getElementById('scannerFullscreenBtn');
+    btn.textContent = isInScannerFullscreen() ? '⛶ Vollbild beenden' : '⛶ Vollbild';
+  }
+  document.addEventListener('fullscreenchange', updateFullscreenBtnLabel);
+  document.addEventListener('webkitfullscreenchange', updateFullscreenBtnLabel);
+
+  /* ============================================================
+     AUTH – Zugriff aufs Dashboard nur für eingeloggte Admin-Nutzer:innen
+  ============================================================ */
+
+  async function showApp(){
+    document.getElementById('loginBackdrop').classList.remove('open');
+    document.getElementById('appMain').style.display = '';
+    document.getElementById('logoutBtn').style.display = '';
+    loadAll();
+  }
+
+  async function showLogin(){
+    document.getElementById('appMain').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.getElementById('loginBackdrop').classList.add('open');
+  }
+
+  async function checkAuth(){
+    // Falls Supabase uns nach Klick auf den "Passwort zuruecksetzen"-Link
+    // aus der E-Mail hierher zurueckschickt, zeigt es einen PASSWORD_RECOVERY-Event.
+    // In dem Fall NICHT direkt ins Dashboard, sondern das Neu-Passwort-Formular zeigen.
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        showLogin();
+        showLoginView('reset');
+      }
+    });
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) { showApp(); } else { showLogin(); }
+  }
+
+  function showLoginView(view){
+    document.getElementById('loginForm').style.display = view === 'login' ? 'block' : 'none';
+    document.getElementById('forgotForm').style.display = view === 'forgot' ? 'block' : 'none';
+    document.getElementById('resetForm').style.display = view === 'reset' ? 'block' : 'none';
+    document.getElementById('loginError').classList.remove('show');
+    document.getElementById('forgotError').classList.remove('show');
+    document.getElementById('forgotSuccess').classList.remove('show');
+    document.getElementById('resetError').classList.remove('show');
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    const errEl = document.getElementById('loginError');
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      errEl.textContent = 'Login fehlgeschlagen: ' + error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    errEl.classList.remove('show');
+    showApp();
+  });
+
+  document.getElementById('showForgot').addEventListener('click', () => {
+    showLoginView('forgot');
+  });
+
+  document.getElementById('backToLogin').addEventListener('click', () => {
+    showLoginView('login');
+  });
+
+  document.getElementById('forgotForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgotEmail').value;
+    const errEl = document.getElementById('forgotError');
+    const successEl = document.getElementById('forgotSuccess');
+    errEl.classList.remove('show');
+    successEl.classList.remove('show');
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) {
+      errEl.textContent = 'Fehler: ' + error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    successEl.classList.add('show');
+  });
+
+  document.getElementById('resetForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = document.getElementById('newPassword').value;
+    const errEl = document.getElementById('resetError');
+    errEl.classList.remove('show');
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      errEl.textContent = 'Fehler: ' + error.message;
+      errEl.classList.add('show');
+      return;
+    }
+    showLoginView('login');
+    showApp();
+  });
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    showLoginView('login');
+    showLogin();
+  });
+
+  checkAuth();
 </script>
 
+<!-- ===== Mobile App-Navbar (unten, nur < 760px) ===== -->
+<nav class="mobile-navbar" id="mobileNavbar" aria-label="Hauptnavigation">
+  <button class="mnav-item active" data-target="overviewPanel" aria-label="Übersicht">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9a1 1 0 0 0 1 1h4v-6h2v6h4a1 1 0 0 0 1-1v-9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Start</span>
+  </button>
+  <button class="mnav-item" data-target="participantsPanel" aria-label="Teilnehmendenliste">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="7" r="3" stroke="currentColor" stroke-width="2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M16 4.5a3 3 0 0 1 0 5.9M20 20c0-2.8-2-5.2-4.7-5.9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Teilnehmer</span>
+  </button>
+  <button class="mnav-item mnav-scanner" data-target="scannerPanel" aria-label="QR-Scanner">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 8V6a2 2 0 0 1 2-2h2M4 16v2a2 2 0 0 0 2 2h2M20 8V6a2 2 0 0 0-2-2h-2M20 16v2a2 2 0 0 1-2 2h-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+  </button>
+  <button class="mnav-item" data-target="cancellationsPanel" aria-label="Absagenliste">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="m9.5 9.5 5 5m0-5-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Absagen</span>
+  </button>
+  <button class="mnav-item" data-target="waitlistPanel" aria-label="Warteliste">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Warteliste</span>
+  </button>
+</nav>
 
 <!-- ===== Barrierefreiheits-Widget ===== -->
 <button class="a11y-toggle" id="a11yToggle" aria-label="Barrierefreiheits-Einstellungen öffnen" aria-expanded="false" aria-controls="a11yPanel">
@@ -463,7 +1436,7 @@
       (u. a. für Ihre Cookie-Auswahl, Ihre Barrierefreiheits-Einstellungen sowie – im
       passwortgeschützten Admin-Bereich – Ihre Anmeldesitzung). Es findet kein Tracking und
       keine Analyse Ihres Verhaltens statt. Details in unserer
-      <a href="datenschutz.html">Datenschutzerklärung</a>.
+      <a href="../datenschutz.html">Datenschutzerklärung</a>.
     </p>
     <div class="cookie-actions">
       <button type="button" class="cookie-necessary" id="cookieNecessary">Nur notwendige</button>

@@ -126,13 +126,16 @@
   /* ---------- Partners ---------- */
   .partners{padding:46px 0;border-bottom:1px solid var(--line);}
   .partners .eyebrow{display:block;text-align:center;margin-bottom:28px;color:#8a8f99;font-weight:700;}
-  .partner-row{display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:nowrap;}
+  .partner-row{display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:wrap;}
+  .partner-row a{display:inline-flex;align-items:center;line-height:0;}
   img.partner{
     height:45px;width:auto;max-width:180px;object-fit:contain;
     filter:grayscale(1);opacity:.6;
     transition:filter .2s ease,opacity .2s ease;
   }
-  img.partner:hover{filter:grayscale(0);opacity:1;}
+  img.partner:hover,.partner-row a:focus-visible img.partner{filter:grayscale(0);opacity:1;}
+  img.partner.partner-large{height:58px;max-width:220px;}
+  img.partner.partner-lkvr{height:52px;max-width:200px;}
 
   /* ---------- Details ---------- */
   .details{background:var(--gray-bg);padding:100px 0;}
@@ -182,6 +185,8 @@
     .details-card{padding:24px 24px 14px;}
     .partner-row{gap:28px;flex-wrap:wrap;}
     img.partner{height:36px;max-width:144px;}
+    img.partner.partner-large{height:46px;max-width:176px;}
+    img.partner.partner-lkvr{height:42px;max-width:160px;}
   }
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important;}}
 
@@ -220,6 +225,7 @@
   html.a11y-contrast .legal-updated{color:#e4e7eb !important;}
   html.a11y-contrast .legal-note{background:#332b00 !important;color:#ffe45c !important;}
   html.a11y-contrast a{color:var(--accent) !important;}
+  html.a11y-contrast .hero-tag{background:#fff !important;color:#000 !important;}
   html.a11y-contrast .eyebrow{color:var(--accent) !important;}
 
   /* Das Barrierefreiheits-Panel selbst bleibt UNABHAENGIG vom Kontrastmodus
@@ -378,9 +384,18 @@
   <div class="wrap">
     <span class="eyebrow">Unsere starken regionalen Partner</span>
     <div class="partner-row">
-      <img class="partner" src="https://service.stralsund.de/documents/81629/82969/HST-Nebenversion-CMYK.png" alt="Hansestadt Stralsund">
-      <img class="partner" src="https://partners-cdn.studysmarter.de/media/uploads/2026/07/9095d6433b0c1a91/soundprojekt.de.png" alt="Sound Projekt">
-      <img class="partner" src="https://gruendungswerft.com/wp-content/uploads/2026/05/image-2-1024x424.png" alt="MakerPORT">
+      <a href="https://www.stralsund.de/" target="_blank" rel="noopener" aria-label="Hansestadt Stralsund (öffnet in neuem Tab)">
+        <img class="partner" src="https://service.stralsund.de/documents/81629/82969/HST-Nebenversion-CMYK.png" alt="Hansestadt Stralsund">
+      </a>
+      <a href="https://soundprojekt.de/" target="_blank" rel="noopener" aria-label="Sound Projekt Stralsund (öffnet in neuem Tab)">
+        <img class="partner partner-large" src="https://partners-cdn.studysmarter.de/media/uploads/2026/07/9095d6433b0c1a91/soundprojekt.de.png" alt="Sound Projekt">
+      </a>
+      <a href="https://www.makerport.de/" target="_blank" rel="noopener" aria-label="MakerPORT Stralsund (öffnet in neuem Tab)">
+        <img class="partner" src="https://gruendungswerft.com/wp-content/uploads/2026/05/image-2-1024x424.png" alt="MakerPORT">
+      </a>
+      <a href="https://www.lk-vr.de/" target="_blank" rel="noopener" aria-label="Landkreis Vorpommern-Rügen (öffnet in neuem Tab)">
+        <img class="partner partner-lkvr" src="https://www.lk-vr.de/layout/lkvr2018/assets/img/logo-lkvr-2018.png?__ts=1527847505" alt="Landkreis Vorpommern-Rügen">
+      </a>
     </div>
   </div>
 </section>
@@ -426,7 +441,7 @@
     <div class="footer-grid">
       <div>
         <div class="brand"><span class="mark"></span>Wirtschaftsforum Stralsund</div>
-        <p class="footer-desc">Das Wirtschaftsforum Stralsund 2026 ist eine Initiative der Hansestadt Stralsund mit Unterstützung des MakerPORT Stralsund.</p>
+        <p class="footer-desc">Das Wirtschaftsforum Stralsund 2026 ist eine Initiative der Hansestadt Stralsund und dem Landkreis Vorpommern Rügen, mit Unterstützung des MakerPORT Stralsund.</p>
       </div>
       <div>
         <div class="footer-heading">Navigation</div>
@@ -439,7 +454,6 @@
     </div>
     <div class="footer-bottom">
       <span>© 2026 Wirtschaftsforum Stralsund. Alle Rechte vorbehalten.</span>
-      <span>Hansestadt Stralsund</span>
     </div>
   </div>
 </footer>

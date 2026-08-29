@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Kontakt – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
+<script src="config.js?v=2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
 <style>
   :root{
     --accent:#b5152b;
@@ -453,7 +455,8 @@
     });
   })();
 
-  // Kontaktformular: Versand ueber FormSubmit (kein eigenes Backend noetig)
+  // Kontaktformular: Speicherung direkt in Supabase (ersetzt FormSubmit).
+  // Ein Datenbank-Webhook benachrichtigt euch zusaetzlich automatisch per E-Mail.
   (function(){
     var form = document.getElementById('contactForm');
     if(!form) return;
@@ -461,7 +464,15 @@
     var errorBox = document.getElementById('cf_error');
     var successBox = document.getElementById('cf_success');
 
-    form.addEventListener('submit', function(e){
+    if(!window.supabase){
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Formular derzeit nicht verfügbar';
+      console.error('Supabase-Bibliothek (cdn.jsdelivr.net) konnte nicht geladen werden.');
+      return;
+    }
+    var supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+
+    form.addEventListener('submit', async function(e){
       e.preventDefault();
       errorBox.style.display = 'none';
 
@@ -470,35 +481,32 @@
         return;
       }
 
-      var data = {
-        name: document.getElementById('cf_name').value,
-        email: document.getElementById('cf_email').value,
-        subject: 'Kontaktformular Wirtschaftsforum: ' + document.getElementById('cf_subject').value,
-        message: document.getElementById('cf_message').value,
-        _subject: 'Kontaktformular Wirtschaftsforum: ' + document.getElementById('cf_subject').value,
-        _template: 'table',
-        _captcha: 'false',
-        _honey: document.querySelector('[name="_honey"]').value
-      };
+      // Honeypot-Feld: wenn ausgefuellt, war es vermutlich ein Bot -> so tun als ob's geklappt hat
+      if(document.querySelector('[name="_honey"]').value){
+        form.style.display = 'none';
+        successBox.classList.add('show');
+        return;
+      }
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet ...';
 
-      fetch('https://formsubmit.co/ajax/wirtschaftsforum@makerport.de', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      .then(function(res){ if(!res.ok) throw new Error('Netzwerkfehler'); return res.json(); })
-      .then(function(){
-        form.style.display = 'none';
-        successBox.classList.add('show');
-      })
-      .catch(function(){
+      var { error } = await supabase.from('contact_messages').insert([{
+        name: document.getElementById('cf_name').value,
+        email: document.getElementById('cf_email').value,
+        subject: document.getElementById('cf_subject').value,
+        message: document.getElementById('cf_message').value
+      }]);
+
+      if(error){
         errorBox.style.display = 'block';
         submitBtn.disabled = false;
         submitBtn.textContent = 'Nachricht senden';
-      });
+        return;
+      }
+
+      form.style.display = 'none';
+      successBox.classList.add('show');
     });
   })();
 

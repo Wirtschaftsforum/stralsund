@@ -1047,7 +1047,19 @@
     const { data, error } = await supabase.functions.invoke('send-contact-reply', {
       body: { messageId, replyText }
     });
-    if (error) throw new Error(error.message || 'Antwort konnte nicht gesendet werden.');
+    if (error) {
+      // supabase-js zeigt bei Fehlern nur "Edge Function returned a non-2xx
+      // status code" an, nicht den eigentlichen Grund. Der steckt im rohen
+      // Response-Objekt unter error.context - den lesen wir hier gezielt aus.
+      let detail = error.message;
+      if (error.context && typeof error.context.json === 'function'){
+        try{
+          const body = await error.context.json();
+          if (body && body.error) detail = body.error;
+        }catch(e){ /* Body war kein JSON, dann bleibt die generische Meldung */ }
+      }
+      throw new Error(detail || 'Antwort konnte nicht gesendet werden.');
+    }
     if (data && data.error) throw new Error(data.error);
     return data;
   }

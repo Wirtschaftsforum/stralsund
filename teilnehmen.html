@@ -10,7 +10,7 @@
      NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
      deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
      teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
 <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Teilnehmen – Wirtschaftsforum Stralsund</title>
@@ -337,7 +337,7 @@
 </style>
 <script src="config.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" onerror="console.error('[QRCode] jsdelivr fehlgeschlagen, versuche unpkg als Rückfall …'); var s=document.createElement('script'); s.src='https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'; s.onerror=function(){ console.error('[QRCode] Auch unpkg fehlgeschlagen.'); }; document.head.appendChild(s);"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -623,16 +623,42 @@
     // ===== Ticket im Browser rendern (Name + Termin + QR-Code) und als PNG/PDF anbietbar machen =====
     var ticketCanvasEl = null;
 
+    // Wartet bis zu 5 Sekunden darauf, dass die QRCode-Bibliothek verfügbar ist
+    // (falls die Hauptquelle langsam/fehlgeschlagen ist und der Rückfall auf
+    // unpkg.com noch nachlädt), statt sofort mit einem Fehler abzubrechen.
+    function waitForQRCode(callback, attemptsLeft){
+      if(typeof attemptsLeft === 'undefined') attemptsLeft = 50;
+      if(typeof QRCode !== 'undefined'){
+        callback(true);
+        return;
+      }
+      if(attemptsLeft <= 0){
+        callback(false);
+        return;
+      }
+      setTimeout(function(){ waitForQRCode(callback, attemptsLeft - 1); }, 100);
+    }
+
     function buildTicket(participantId, fullName){
       console.log('[Ticket] Starte Erzeugung für', participantId);
-      var qrData = 'WFS-CHECKIN:' + participantId;
 
-      QRCode.toDataURL(qrData, { width: 440, margin: 1 }, function(err, qrDataUrl){
-        if(err){
-          console.error('[Ticket] QR-Code konnte nicht erzeugt werden:', err);
+      waitForQRCode(function(available){
+        if(!available){
+          console.error('[Ticket] QRCode-Bibliothek konnte auch nach Warten nicht geladen werden.');
+          var box = document.getElementById('qrPreviewBox');
+          box.innerHTML = '<p style="color:#c94b4b;font-size:13.5px;">Ihr Ticket konnte nicht angezeigt werden (Bibliothek konnte nicht geladen werden). Bitte laden Sie die Seite neu, oder Ihr Ticket wird Ihnen zusätzlich per E-Mail zugeschickt.</p>';
+          box.style.display = 'block';
           return;
         }
-        console.log('[Ticket] QR-Code-DataURL erzeugt, Länge:', qrDataUrl ? qrDataUrl.length : 0);
+
+        var qrData = 'WFS-CHECKIN:' + participantId;
+
+        QRCode.toDataURL(qrData, { width: 440, margin: 1 }, function(err, qrDataUrl){
+          if(err){
+            console.error('[Ticket] QR-Code konnte nicht erzeugt werden:', err);
+            return;
+          }
+          console.log('[Ticket] QR-Code-DataURL erzeugt, Länge:', qrDataUrl ? qrDataUrl.length : 0);
 
         var qrImg = new Image();
         qrImg.onerror = function(err){
@@ -731,6 +757,7 @@
           }
         };
         qrImg.src = qrDataUrl;
+        });
       });
     }
 

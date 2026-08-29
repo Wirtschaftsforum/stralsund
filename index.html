@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
+     GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
+     Konfigurationsebene). X-Frame-Options und X-Content-Type-Options lassen sich technisch
+     NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
+     deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
+     teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Einladung zum Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -127,7 +137,7 @@
   .partners{padding:46px 0;border-bottom:1px solid var(--line);}
   .partners .eyebrow{display:block;text-align:center;margin-bottom:28px;color:#8a8f99;font-weight:700;}
   .partner-row{display:flex;align-items:center;justify-content:center;gap:56px;flex-wrap:wrap;}
-  .partner-row a{display:inline-flex;align-items:center;line-height:0;}
+  .partner-row a{display:inline-flex;align-items:center;line-height:0;min-width:0;flex-shrink:1;}
   img.partner{
     height:45px;width:auto;max-width:180px;object-fit:contain;
     filter:grayscale(1);opacity:.6;
@@ -183,10 +193,10 @@
     .details{padding:64px 0;}
     .details .wrap{padding:0 14px;}
     .details-card{padding:24px 24px 14px;}
-    .partner-row{gap:28px;flex-wrap:wrap;}
-    img.partner{height:36px;max-width:144px;}
-    img.partner.partner-large{height:46px;max-width:176px;}
-    img.partner.partner-lkvr{height:42px;max-width:160px;}
+    .partner-row{gap:12px;flex-wrap:nowrap;justify-content:space-between;}
+    img.partner{height:26px;max-width:74px;}
+    img.partner.partner-large{height:32px;max-width:88px;}
+    img.partner.partner-lkvr{height:30px;max-width:82px;}
   }
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important;}}
 

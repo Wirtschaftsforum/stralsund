@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
+     GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
+     Konfigurationsebene). X-Frame-Options und X-Content-Type-Options lassen sich technisch
+     NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
+     deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
+     teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Teilnehmen – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -370,6 +380,11 @@
   <div class="wrap">
 
     <form class="form-card" id="anmeldeForm" autocomplete="on" novalidate>
+      <!-- Anti-Spam: fuer Menschen unsichtbares Feld, das nur Bots ausfuellen -->
+      <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+        <label for="anm_website">Website</label>
+        <input type="text" id="anm_website" name="anm_website" tabindex="-1" autocomplete="off">
+      </div>
       <div class="form-grid">
 
         <div class="field">
@@ -409,18 +424,18 @@
         </div>
 
         <div class="field full">
-          <label for="strasse">Straße und Hausnummer <span class="req">*</span></label>
-          <input type="text" id="strasse" name="strasse" autocomplete="street-address" required>
+          <label for="strasse">Straße und Hausnummer <span class="opt">(optional)</span></label>
+          <input type="text" id="strasse" name="strasse" autocomplete="street-address">
         </div>
 
         <div class="field">
-          <label for="stadt">Stadt <span class="req">*</span></label>
-          <input type="text" id="stadt" name="stadt" autocomplete="address-level2" required>
+          <label for="stadt">Stadt <span class="opt">(optional)</span></label>
+          <input type="text" id="stadt" name="stadt" autocomplete="address-level2">
         </div>
 
         <div class="field">
-          <label for="plz">PLZ <span class="req">*</span></label>
-          <input type="text" id="plz" name="plz" inputmode="numeric" pattern="[0-9]{4,5}" autocomplete="postal-code" required>
+          <label for="plz">PLZ <span class="opt">(optional)</span></label>
+          <input type="text" id="plz" name="plz" inputmode="numeric" pattern="[0-9]{4,5}" autocomplete="postal-code">
         </div>
 
         <div class="field">
@@ -429,8 +444,8 @@
         </div>
 
         <div class="field">
-          <label for="telefon">Telefon <span class="req">*</span></label>
-          <input type="tel" id="telefon" name="telefon" autocomplete="tel" required>
+          <label for="telefon">Telefon <span class="opt">(optional)</span></label>
+          <input type="tel" id="telefon" name="telefon" autocomplete="tel">
         </div>
 
       </div>
@@ -461,6 +476,9 @@
           <a id="qrDownloadLink" class="btn btn-outline-dark" download="wirtschaftsforum-checkin-qrcode.png">QR-Code speichern</a>
         </div>
         <p style="font-size:12.5px;color:#8a8f99;margin-top:12px;">Diesen Code erhalten Sie zusätzlich auch per E-Mail.</p>
+      </div>
+      <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line);text-align:center;">
+        <a href="https://www.makerport.de/event" target="_blank" rel="noopener" class="btn btn-outline-dark">Entdecken Sie weitere Veranstaltungen des MakerPort Stralsund</a>
       </div>
     </div>
 
@@ -537,6 +555,14 @@
     var successBox = document.getElementById('successBox');
     var submitBtn = form.querySelector('button[type="submit"]');
 
+    // Maximale Teilnehmerzahl lebt jetzt ausschließlich in der Datenbank
+    // (Tabelle event_settings, nur im Admin-Dashboard änderbar) -- die
+    // Anmeldefunktion liest sie sich dort selbst, kein Wert mehr von hier nötig.
+
+    // Anti-Spam "Zeitfalle": Formulare, die schneller als in ein paar Sekunden
+    // abgeschickt werden, stammen so gut wie nie von einem Menschen.
+    var formRenderedAt = Date.now();
+
     // ===== Weitere Person hinzufuegen/entfernen =====
     var additionalContainer = document.getElementById('additionalPersons');
     var addPersonBtn = document.getElementById('addPersonBtn');
@@ -609,17 +635,33 @@
         form.reportValidity();
         return;
       }
+
+      // ---- Bot-/Spam-Schutz ----
+      // 1) Honeypot: Feld ist fuer Menschen unsichtbar, Bots fuellen es oft trotzdem aus.
+      var honeyField = document.getElementById('anm_website');
+      if(honeyField && honeyField.value){
+        // Wirkt fuer den Bot wie ein normaler Erfolg, es passiert aber nichts.
+        form.classList.add('hide');
+        successBox.classList.add('show');
+        return;
+      }
+      // 2) Zeitfalle: Formular schneller als 3 Sekunden nach dem Laden abgeschickt?
+      if(Date.now() - formRenderedAt < 3000){
+        alert('Ihre Anmeldung konnte nicht übermittelt werden. Bitte prüfen Sie Ihre Angaben oder kontaktieren Sie uns unter wirtschaftsforum@makerport.de');
+        return;
+      }
+
       var data = Object.fromEntries(new FormData(form).entries());
       var additionalPersons = collectAdditionalPersons();
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet …';
 
-      // ID bereits im Browser erzeugen: so kennen wir sie sofort fuer die QR-Vorschau,
+      // IDs bereits im Browser erzeugen: so kennen wir sie sofort fuer die QR-Vorschau,
       // ohne nach dem Insert etwas zurücklesen zu muessen (die öffentliche Anmeldeseite
       // darf aus Datenschutzgruenden nur schreiben, nicht lesen).
       var mainId = crypto.randomUUID();
 
-      var rows = [{
+      var persons = [{
         id: mainId,
         anrede: data.anrede || null,
         titel: data.titel || null,
@@ -635,7 +677,7 @@
       }];
 
       additionalPersons.forEach(function(p){
-        rows.push({
+        persons.push({
           id: crypto.randomUUID(),
           anrede: null, titel: null,
           vorname: p.vorname, nachname: p.nachname,
@@ -645,14 +687,16 @@
         });
       });
 
-      var { error } = await supabase.from('participants').insert(rows);
+      var { data: rpcResult, error } = await supabase.rpc('register_participants', {
+        p_persons: persons
+      });
 
-      if(error){
-        if(error.code === '23505'){
-          alert('Für mindestens eine der angegebenen E-Mail-Adressen liegt bereits eine Anmeldung vor. Bitte alle E-Mail-Adressen prüfen.');
-        } else {
-          alert('Anmeldung konnte nicht gespeichert werden: ' + error.message);
-        }
+      // Bewusst EINE generische Fehlermeldung fuer jeden Fehlerfall (technischer
+      // Fehler, Server nicht erreichbar, ODER bereits registrierte E-Mail-Adresse).
+      // So laesst sich von aussen nicht unterscheiden, ob eine bestimmte
+      // E-Mail-Adresse schon angemeldet ist ("E-Mail-Enumeration").
+      if(error || !rpcResult || rpcResult.status !== 'ok'){
+        alert('Ihre Anmeldung konnte nicht übermittelt werden. Bitte prüfen Sie Ihre Angaben oder kontaktieren Sie uns unter wirtschaftsforum@makerport.de');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Verbindlich anmelden';
         return;
@@ -661,14 +705,32 @@
       form.classList.add('hide');
       successBox.classList.add('show');
 
-      var totalCount = 1 + additionalPersons.length;
+      var results = rpcResult.results || [];
+      var mainResult = results[0];
+      var confirmedCount = results.filter(function(r){ return r.status === 'confirmed'; }).length;
+      var waitlistedCount = results.filter(function(r){ return r.status === 'waitlisted'; }).length;
+      var totalCount = results.length;
+
       var successText = document.getElementById('successText');
-      if(totalCount > 1){
+      if(totalCount === 1){
+        if(mainResult.status === 'waitlisted'){
+          successText.textContent = 'Die Veranstaltung ist aktuell ausgebucht – wir haben Sie auf die Warteliste gesetzt und melden uns, sobald ein Platz frei wird. Eine Bestätigung erhalten Sie zusätzlich per E-Mail.';
+        } else {
+          successText.textContent = 'Wir haben Ihre Angaben erhalten und senden Ihnen in Kürze eine Bestätigung per E-Mail.';
+        }
+      } else if(waitlistedCount === 0){
         successText.textContent = 'Wir haben die Angaben für ' + totalCount + ' Personen erhalten. Jede angemeldete Person erhält in Kürze eine eigene Bestätigung mit persönlichem QR-Code per E-Mail.';
+      } else if(confirmedCount === 0){
+        successText.textContent = 'Die Veranstaltung ist aktuell ausgebucht – alle ' + totalCount + ' Personen wurden auf die Warteliste gesetzt. Wir melden uns, sobald Plätze frei werden.';
+      } else {
+        successText.textContent = confirmedCount + ' von ' + totalCount + ' Personen sind bestätigt, ' + waitlistedCount + ' ' + (waitlistedCount === 1 ? 'Person steht' : 'Personen stehen') + ' auf der Warteliste. Jede Person erhält eine eigene E-Mail mit den Details.';
       }
 
-      // QR-Code fuer die Hauptperson direkt im Browser anzeigen
-      showQrPreview(mainId);
+      // QR-Code fuer die Hauptperson nur zeigen, wenn sie tatsaechlich einen
+      // bestaetigten Platz bekommen hat (nicht bei Warteliste).
+      if(mainResult && mainResult.status === 'confirmed'){
+        showQrPreview(mainId);
+      }
 
       successBox.scrollIntoView({behavior:'smooth', block:'start'});
     });

@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
+     GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
+     Konfigurationsebene). X-Frame-Options und X-Content-Type-Options lassen sich technisch
+     NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
+     deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
+     teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Absagen – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
 <style>
@@ -350,6 +360,11 @@
   <div class="wrap">
 
     <form class="form-card" id="absageForm" autocomplete="on" novalidate>
+      <!-- Anti-Spam: fuer Menschen unsichtbares Feld, das nur Bots ausfuellen -->
+      <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+        <label for="abs_website">Website</label>
+        <input type="text" id="abs_website" name="abs_website" tabindex="-1" autocomplete="off">
+      </div>
       <div class="form-grid">
 
         <div class="field">
@@ -385,6 +400,9 @@
       <div class="ic-ok"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg></div>
       <h2>Ihre Absage wurde übermittelt</h2>
       <p>Vielen Dank für die Rückmeldung. Wir hoffen, Sie bei einer künftigen Veranstaltung begrüßen zu dürfen.</p>
+      <div style="margin-top:28px;padding-top:24px;border-top:1px solid var(--line);text-align:center;">
+        <a href="https://www.makerport.de/event" target="_blank" rel="noopener" class="btn btn-outline-dark">Entdecken Sie weitere Veranstaltungen des MakerPort Stralsund</a>
+      </div>
     </div>
 
   </div>
@@ -460,12 +478,28 @@
     var successBox = document.getElementById('successBox');
     var submitBtn = form.querySelector('button[type="submit"]');
 
+    // Anti-Spam "Zeitfalle": vgl. teilnehmen.html
+    var formRenderedAt = Date.now();
+
     form.addEventListener('submit', async function(e){
       e.preventDefault();
       if(!form.checkValidity()){
         form.reportValidity();
         return;
       }
+
+      // ---- Bot-/Spam-Schutz ----
+      var honeyField = document.getElementById('abs_website');
+      if(honeyField && honeyField.value){
+        form.classList.add('hide');
+        successBox.classList.add('show');
+        return;
+      }
+      if(Date.now() - formRenderedAt < 3000){
+        alert('Ihre Absage konnte nicht übermittelt werden. Bitte prüfen Sie Ihre Angaben oder kontaktieren Sie uns unter wirtschaftsforum@makerport.de');
+        return;
+      }
+
       var data = Object.fromEntries(new FormData(form).entries());
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet …';
@@ -477,7 +511,7 @@
       }]);
 
       if(error){
-        alert('Absage konnte nicht gespeichert werden: ' + error.message);
+        alert('Ihre Absage konnte nicht übermittelt werden. Bitte prüfen Sie Ihre Angaben oder kontaktieren Sie uns unter wirtschaftsforum@makerport.de');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Absagen';
         return;

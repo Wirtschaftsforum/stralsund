@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
+     GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
+     Konfigurationsebene). X-Frame-Options und X-Content-Type-Options lassen sich technisch
+     NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
+     deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
+     teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Datenschutz – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
 <style>

@@ -3,6 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
+     GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
+     Konfigurationsebene). X-Frame-Options und X-Content-Type-Options lassen sich technisch
+     NUR als echter Header setzen -- ueber <meta> haben sie keinerlei Wirkung und werden hier
+     deshalb bewusst NICHT vorgetaeuscht. Die Content-Security-Policy unten funktioniert
+     teilweise per <meta> (frame-ancestors ausgenommen, siehe Kommentar unten). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co; base-uri 'self'; form-action 'self'; object-src 'none';">
+<meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=(), payment=()">
 <title>Kontakt – Wirtschaftsforum Stralsund</title>
 <link rel="stylesheet" href="fonts.css">
 <script src="config.js?v=2"></script>
@@ -377,8 +387,11 @@
               <label for="cf_datenschutz">Ich habe die <a href="datenschutz.html">Datenschutzerklärung</a> gelesen und bin mit der Verarbeitung meiner Angaben zur Bearbeitung meiner Anfrage einverstanden. <span class="req">*</span></label>
             </div>
           </div>
-          <!-- Anti-Spam-Feld (bleibt für Menschen unsichtbar) -->
-          <input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
+          <!-- Anti-Spam: fuer Menschen unsichtbares Feld, das nur Bots ausfuellen -->
+          <div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true">
+            <label for="cf_website">Website</label>
+            <input type="text" id="cf_website" name="_honey" tabindex="-1" autocomplete="off">
+          </div>
         </div>
 
         <div class="form-actions">
@@ -471,6 +484,10 @@
     }
     var supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
 
+    // Anti-Spam "Zeitfalle": Formulare, die schneller als in ein paar Sekunden
+    // abgeschickt werden, stammen so gut wie nie von einem Menschen.
+    var formRenderedAt = Date.now();
+
     form.addEventListener('submit', async function(e){
       e.preventDefault();
       errorBox.style.display = 'none';
@@ -484,6 +501,10 @@
       if(document.querySelector('[name="_honey"]').value){
         form.style.display = 'none';
         successBox.classList.add('show');
+        return;
+      }
+      if(Date.now() - formRenderedAt < 3000){
+        errorBox.style.display = 'block';
         return;
       }
 

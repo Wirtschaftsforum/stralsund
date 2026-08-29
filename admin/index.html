@@ -189,6 +189,8 @@
   .overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
   .overview-card{border:1px solid var(--line);border-radius:6px;padding:22px;}
   .overview-card h3{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#5b6270;font-weight:800;margin-bottom:18px;}
+  .overview-card-link{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
+  .overview-card-link:hover,.overview-card-link:focus-visible{border-color:var(--accent);box-shadow:0 4px 14px rgba(181,21,43,.12);outline:none;}
 
   .capacity-bar-track{
     height:16px;border-radius:20px;background:var(--gray-bg);overflow:hidden;border:1px solid var(--line);
@@ -599,6 +601,9 @@
     <button class="nav-btn" id="navWaitlistBtn" data-target="waitlistPanel">
       Warteliste <span class="nav-count" id="navWaitlistCount">0</span>
     </button>
+    <button class="nav-btn" id="navContactBtn" data-target="contactPanel">
+      Kontaktanfragen <span class="nav-count" id="navContactCount">0</span>
+    </button>
     <button class="nav-btn nav-btn-scanner" id="navScannerBtn" data-target="scannerPanel">
       Scanner
     </button>
@@ -636,6 +641,11 @@
         <div class="overview-card">
           <h3>Neueste Anmeldungen</h3>
           <ul class="latest-list" id="latestList"></ul>
+        </div>
+        <div class="overview-card overview-card-link" id="contactOverviewCard" data-target="contactPanel" role="button" tabindex="0">
+          <h3>Kontaktanfragen</h3>
+          <div class="capacity-label" id="contactOverviewCount">–</div>
+          <div class="capacity-sub">Neue Nachrichten über das Kontaktformular ansehen →</div>
         </div>
       </div>
     </div>
@@ -714,6 +724,31 @@
       <tbody id="waitlistBody"></tbody>
     </table>
     <div class="empty" id="waitlistEmpty" style="display:none;">Die Warteliste ist aktuell leer.</div>
+  </section>
+
+  <section class="panel collapsed" id="contactPanel">
+    <div class="panel-head">
+      <h2>Kontaktanfragen <span class="count" id="contactCount"></span></h2>
+      <div class="panel-head-actions">
+        <button id="exportContactBtn" class="btn btn-outline btn-sm btn-export"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="btn-label-full">Als Excel exportieren</span><span class="btn-label-short">Excel</span></button>
+      </div>
+    </div>
+    <div class="panel-search">
+      <input type="text" id="contactSearch" placeholder="Suche nach Name, E-Mail oder Betreff …">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Absender</th>
+          <th>Betreff</th>
+          <th>Nachricht</th>
+          <th>Eingegangen am</th>
+          <th>Aktionen</th>
+        </tr>
+      </thead>
+      <tbody id="contactBody"></tbody>
+    </table>
+    <div class="empty" id="contactEmpty" style="display:none;">Noch keine Kontaktanfragen.</div>
   </section>
 
   <section class="panel collapsed" id="scannerPanel">
@@ -834,6 +869,9 @@
   function mapWaitlistFromDb(row){
     return { id: row.id, vorname: row.vorname, nachname: row.nachname, firma: row.firma || '', email: row.email, telefon: row.telefon || '', createdAt: row.created_at };
   }
+  function mapContactMessageFromDb(row){
+    return { id: row.id, name: row.name, email: row.email, subject: row.subject, message: row.message, createdAt: row.created_at };
+  }
 
   // Maximale Teilnehmerzahl der Veranstaltung – für das Auslastungsdiagramm.
   // Bei Bedarf anpassen.
@@ -868,6 +906,12 @@
     const { data, error } = await supabase.from('waitlist').select('*').order('created_at');
     if (error) { console.error(error); return []; }
     return data.map(mapWaitlistFromDb);
+  }
+
+  async function fetchContactMessages(){
+    const { data, error } = await supabase.from('contact_messages').select('*').order('created_at', { ascending:false });
+    if (error) { console.error(error); return []; }
+    return data.map(mapContactMessageFromDb);
   }
 
   async function addParticipant(data){
@@ -920,6 +964,11 @@
     if (error) throw new Error(error.message);
   }
 
+  async function deleteContactMessage(id){
+    const { error } = await supabase.from('contact_messages').delete().eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
   async function promoteFromWaitlist(id){
     const { data: w, error: selErr } = await supabase.from('waitlist').select('*').eq('id', id).single();
     if (selErr) throw new Error(selErr.message);
@@ -944,21 +993,25 @@
   let currentParticipants = [];
   let currentCancellations = [];
   let currentWaitlist = [];
+  let currentContactMessages = [];
   let participantsSearchTerm = '';
   let cancellationsSearchTerm = '';
   let waitlistSearchTerm = '';
+  let contactSearchTerm = '';
 
   async function loadAll(){
-    const [stats, plist, clist, wlist] = await Promise.all([
-      fetchStats(), fetchParticipants(), fetchCancellations(), fetchWaitlist()
+    const [stats, plist, clist, wlist, cmlist] = await Promise.all([
+      fetchStats(), fetchParticipants(), fetchCancellations(), fetchWaitlist(), fetchContactMessages()
     ]);
     currentParticipants = plist;
     currentCancellations = clist;
     currentWaitlist = wlist;
+    currentContactMessages = cmlist;
     renderStats(stats);
     renderParticipants();
     renderCancellations();
     renderWaitlist();
+    renderContactMessages();
     renderCapacity();
     renderLatestRegistrations();
   }
@@ -1085,6 +1138,52 @@
     `).join('');
   }
 
+  function renderContactMessages(){
+    const term = contactSearchTerm.trim().toLowerCase();
+    const list = !term ? currentContactMessages : currentContactMessages.filter(m => {
+      const haystack = [m.name, m.email, m.subject].join(' ').toLowerCase();
+      return haystack.includes(term);
+    });
+
+    const body = document.getElementById('contactBody');
+    const empty = document.getElementById('contactEmpty');
+    document.getElementById('contactCount').textContent = '(' + list.length + ' von ' + currentContactMessages.length + ')';
+    document.getElementById('navContactCount').textContent = currentContactMessages.length;
+    const overviewCountEl = document.getElementById('contactOverviewCount');
+    if(overviewCountEl){
+      overviewCountEl.textContent = currentContactMessages.length + (currentContactMessages.length === 1 ? ' Nachricht' : ' Nachrichten');
+    }
+
+    if(!list.length){
+      body.innerHTML='';
+      empty.style.display='block';
+      empty.textContent = currentContactMessages.length ? 'Keine Treffer für diese Suche.' : 'Noch keine Kontaktanfragen.';
+      return;
+    }
+    empty.style.display='none';
+    body.innerHTML = list.map(m => `
+      <tr>
+        <td data-label="Absender">
+          <div class="name-cell">${esc(m.name)}</div>
+          <div class="sub">${esc(m.email)}</div>
+        </td>
+        <td data-label="Betreff">${esc(m.subject)}</td>
+        <td data-label="Nachricht">
+          <div style="max-width:320px;white-space:normal;" title="${esc(m.message)}">
+            ${esc(m.message.length > 140 ? m.message.slice(0,140) + '…' : m.message)}
+          </div>
+        </td>
+        <td data-label="Eingegangen am">${new Date(m.createdAt).toLocaleString('de-DE')}</td>
+        <td data-label="Aktionen">
+          <div class="actions-cell">
+            <a class="btn btn-sm btn-ok" href="mailto:${encodeURIComponent(m.email)}?subject=${encodeURIComponent('Re: ' + m.subject)}">Antworten</a>
+            <button class="btn btn-sm btn-outline" data-delcontact="${m.id}">Entfernen</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
   function renderWaitlist(){
     const term = waitlistSearchTerm.trim().toLowerCase();
     const list = !term ? currentWaitlist : currentWaitlist.filter(w => {
@@ -1132,6 +1231,10 @@
     waitlistSearchTerm = e.target.value;
     renderWaitlist();
   });
+  document.getElementById('contactSearch').addEventListener('input', (e) => {
+    contactSearchTerm = e.target.value;
+    renderContactMessages();
+  });
 
   // Navigation: Top-Quick-Nav UND untere App-Navbar steuern gemeinsam dieselben Panels
   function activatePanel(targetId){
@@ -1167,6 +1270,16 @@
     document.querySelectorAll('.nav-btn, .mnav-item').forEach(btn => {
       btn.addEventListener('click', () => activatePanel(btn.getAttribute('data-target')));
     });
+    const contactCard = document.getElementById('contactOverviewCard');
+    if(contactCard){
+      contactCard.addEventListener('click', () => activatePanel(contactCard.getAttribute('data-target')));
+      contactCard.addEventListener('keydown', (e) => {
+        if(e.key === 'Enter' || e.key === ' '){
+          e.preventDefault();
+          activatePanel(contactCard.getAttribute('data-target'));
+        }
+      });
+    }
   });
 
   // Excel-Export
@@ -1206,12 +1319,21 @@
     exportToExcel(rows, 'warteliste.xlsx', 'Warteliste');
   });
 
+  document.getElementById('exportContactBtn').addEventListener('click', () => {
+    const rows = currentContactMessages.map(m => ({
+      'Name': m.name, 'E-Mail': m.email, 'Betreff': m.subject, 'Nachricht': m.message,
+      'Eingegangen am': new Date(m.createdAt).toLocaleString('de-DE')
+    }));
+    exportToExcel(rows, 'kontaktanfragen.xlsx', 'Kontaktanfragen');
+  });
+
   document.addEventListener('click', async (e) => {
     const checkinId = e.target.getAttribute('data-checkin');
     const cancelId = e.target.getAttribute('data-cancel');
     const delCancelId = e.target.getAttribute('data-delcancel');
     const promoteId = e.target.getAttribute('data-promote');
     const delWaitlistId = e.target.getAttribute('data-delwaitlist');
+    const delContactId = e.target.getAttribute('data-delcontact');
 
     try{
       if(checkinId){
@@ -1239,6 +1361,12 @@
       if(delWaitlistId){
         if(confirm('Diesen Wartelisten-Eintrag entfernen?')){
           await deleteWaitlistEntry(delWaitlistId);
+          loadAll();
+        }
+      }
+      if(delContactId){
+        if(confirm('Diese Kontaktanfrage entfernen?')){
+          await deleteContactMessage(delContactId);
           loadAll();
         }
       }

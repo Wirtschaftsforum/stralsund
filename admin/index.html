@@ -131,18 +131,11 @@
 
   main{padding:40px 0 80px;}
 
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:28px;}
-  .stat-card{background:#fff;border:1px solid var(--line);border-radius:6px;padding:22px 24px;}
-  .stat-card .label{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#8a8f99;font-weight:700;}
-  .stat-card .value{font-size:34px;font-weight:800;color:var(--ink);margin-top:8px;}
-  .stat-card.accent .value{color:var(--accent);}
-  .stat-card.ok .value{color:var(--ok);}
-
   .quick-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:44px;}
   .nav-btn{
     display:inline-flex;align-items:center;gap:8px;padding:13px 20px;font-size:14px;font-weight:700;
     border-radius:6px;border:1.5px solid var(--line);background:#fff;color:var(--ink);cursor:pointer;
-    transition:border-color .15s ease,background .15s ease,color .15s ease;
+    transition:border-color .1s ease-out,background .1s ease-out,color .1s ease-out;
   }
   .nav-btn:hover{border-color:var(--ink);}
   .nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
@@ -161,7 +154,7 @@
   @media (max-width:760px){
     header{
       padding:12px 0;position:sticky;top:0;z-index:140;
-      background:rgba(255,255,255,.94);backdrop-filter:blur(8px);
+      background:#fff;border-bottom:1px solid var(--line);
     }
     .header-inner{flex-wrap:nowrap;justify-content:space-between;text-align:left;gap:8px;}
     .brand{font-size:13.5px;gap:8px;}
@@ -184,13 +177,34 @@
 
   .panel.collapsed{display:none;}
   .overview-body{padding:28px 24px 32px;}
-  .overview-body .stats{margin-bottom:28px;}
 
-  .overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-  .overview-card{border:1px solid var(--line);border-radius:6px;padding:22px;}
+  .overview-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px;
+    grid-template-areas:
+      "minstats contact"
+      "capacity latest";
+  }
+  .mini-stats-card{grid-area:minstats;}
+  #contactOverviewCard{grid-area:contact;}
+  #capacityCard{grid-area:capacity;}
+  #latestCard{grid-area:latest;}
+
+  .overview-card{border:1px solid var(--line);border-radius:6px;padding:22px;background:#fff;}
   .overview-card h3{font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#5b6270;font-weight:800;margin-bottom:18px;}
   .overview-card-link{cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease;}
   .overview-card-link:hover,.overview-card-link:focus-visible{border-color:var(--accent);box-shadow:0 4px 14px rgba(181,21,43,.12);outline:none;}
+
+  .mini-stats{display:flex;}
+  .mini-stat{
+    flex:1;text-align:center;padding:6px 6px 2px;border-radius:6px;cursor:pointer;
+    transition:background .15s ease;
+  }
+  .mini-stat:hover,.mini-stat:focus-visible{background:var(--gray-bg);outline:none;}
+  .mini-stat + .mini-stat{border-left:1px solid var(--line);}
+  .mini-stat-value{font-size:26px;font-weight:800;color:var(--accent);}
+  .mini-stat.ok .mini-stat-value{color:var(--ok);}
+  .mini-stat:last-child .mini-stat-value{color:var(--ink);}
+  .mini-stat-label{font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:#8a8f99;font-weight:700;margin-top:5px;}
 
   .capacity-bar-track{
     height:16px;border-radius:20px;background:var(--gray-bg);overflow:hidden;border:1px solid var(--line);
@@ -214,7 +228,14 @@
   .latest-empty{padding:14px 0;color:#8a8f99;font-size:13.5px;}
 
   @media (max-width:760px){
-    .overview-grid{grid-template-columns:1fr;}
+    .overview-grid{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "minstats"
+        "capacity"
+        "contact"
+        "latest";
+    }
   }
 
   .panel-search{
@@ -284,11 +305,23 @@
   .modal-error{font-size:13px;color:var(--accent);margin-top:10px;display:none;}
   .modal-error.show{display:block;}
 
+  .reply-original{background:var(--gray-bg);border-radius:6px;padding:16px 18px;margin-bottom:20px;}
+  .reply-original-label{font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:#8a8f99;font-weight:700;margin-bottom:6px;}
+  .reply-original-label span{color:var(--ink);font-weight:800;text-transform:none;letter-spacing:0;}
+  .reply-original-subject{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:6px;}
+  .reply-original-text{font-size:13px;color:#5b6270;line-height:1.6;max-height:120px;overflow-y:auto;white-space:pre-wrap;}
+
+  .answered-toggle{
+    display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+    font-size:12px;font-weight:700;padding:5px 10px;border-radius:20px;border:1.5px solid var(--line);
+    background:#fff;color:#8a8f99;transition:background .15s ease,color .15s ease,border-color .15s ease;
+  }
+  .answered-toggle.answered{background:var(--ok-tint);color:var(--ok);border-color:#bfe6cf;}
+  .answered-toggle input{margin:0;}
+
   @media (max-width:760px){
-    .stats{grid-template-columns:repeat(3,1fr);gap:8px;}
-    .stat-card{padding:12px 8px;border-radius:8px;text-align:center;}
-    .stat-card .label{font-size:9.5px;letter-spacing:.03em;}
-    .stat-card .value{font-size:22px;margin-top:4px;}
+    .mini-stat-value{font-size:22px;}
+    .mini-stat-label{font-size:9px;}
     .panel-head{flex-wrap:wrap;gap:12px;padding:16px 16px;}
     .panel-head-actions{width:100%;}
     .panel-head-actions .btn{flex:1;justify-content:center;}
@@ -308,7 +341,7 @@
   html.a11y-contrast body{background:#000 !important;color:#fff !important;}
   html.a11y-contrast header{background:#000 !important;border-color:#555 !important;}
   html.a11y-contrast .brand small,
-  html.a11y-contrast .stat-card .label,
+  html.a11y-contrast .mini-stat-label,
   html.a11y-contrast .overview-card h3,
   html.a11y-contrast .capacity-sub,
   html.a11y-contrast .latest-firma,
@@ -322,7 +355,6 @@
   html.a11y-contrast #scannerHint,
   html.a11y-contrast .form-required-hint,
   html.a11y-contrast .login-forgot-hint{color:#d4d8de !important;}
-  html.a11y-contrast .stat-card,
   html.a11y-contrast section.panel,
   html.a11y-contrast .overview-card,
   html.a11y-contrast .modal,
@@ -333,8 +365,9 @@
   html.a11y-contrast .panel-head,
   html.a11y-contrast .panel-search,
   html.a11y-contrast tbody td,
-  html.a11y-contrast .stat-card,
+  html.a11y-contrast .mini-stat + .mini-stat,
   html.a11y-contrast .overview-card{border-color:#555 !important;}
+  html.a11y-contrast .mini-stat:hover{background:#1a1a1a !important;}
   html.a11y-contrast tbody tr:nth-child(even){background:#151515 !important;}
   html.a11y-contrast tbody tr:hover{background:#332b00 !important;}
   html.a11y-contrast thead th{background:#000 !important;color:#fff !important;border-bottom:1px solid #555;}
@@ -342,7 +375,7 @@
   html.a11y-contrast .modal h3,
   html.a11y-contrast .panel-head h2,
   html.a11y-contrast .capacity-label,
-  html.a11y-contrast .stat-card .value{color:#fff !important;}
+  html.a11y-contrast .mini-stat:last-child .mini-stat-value{color:#fff !important;}
   html.a11y-contrast .field input,
   html.a11y-contrast .field select,
   html.a11y-contrast .modal input,
@@ -422,7 +455,7 @@
     box-shadow:0 6px 18px rgba(181,21,43,.35);
     transition:transform .15s ease,background .15s ease;
   }
-  .a11y-toggle:hover{background:var(--accent-dark,#8a0f21);transform:translateY(-2px);}
+  .a11y-toggle:hover{background:var(--accent-dark,#8a0f21);}
   .a11y-toggle:focus-visible{outline:2px solid var(--ink,#0d1117);outline-offset:3px;}
   .a11y-toggle svg{width:26px;height:26px;}
 
@@ -486,16 +519,16 @@
   .mobile-navbar{
     display:none;
     position:fixed;left:0;right:0;bottom:0;z-index:150;
-    background:#fff;border-top:1px solid var(--line);
+    background:#fff;border-top:1.5px solid var(--line);
     padding:6px 4px calc(6px + env(safe-area-inset-bottom, 0px));
     align-items:flex-end;justify-content:space-between;gap:2px;
-    box-shadow:0 -6px 18px rgba(0,0,0,.07);
+    box-shadow:0 -2px 6px rgba(13,17,23,.06);
   }
   .mnav-item{
     flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;
     background:none;border:none;cursor:pointer;color:#8a8f99;
     font-family:inherit;font-size:10px;font-weight:700;padding:7px 2px 5px;
-    border-radius:8px;transition:color .15s ease;
+    border-radius:8px;transition:color .1s ease-out;
   }
   .mnav-item span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
   .mnav-item svg{width:21px;height:21px;flex-shrink:0;}
@@ -503,11 +536,12 @@
   .mnav-item:active{background:var(--gray-bg);}
 
   .mnav-item.mnav-scanner{
-    flex:0 0 60px;position:relative;top:-16px;
-    width:60px;height:60px;border-radius:50%;
-    background:var(--accent);color:#fff;
-    box-shadow:0 6px 16px rgba(181,21,43,.4);
+    flex:0 0 58px;position:relative;top:-14px;
+    width:58px;height:58px;border-radius:50%;
+    background:var(--accent);color:#fff;border:3px solid #fff;
+    box-shadow:0 2px 6px rgba(13,17,23,.22);
     justify-content:center;padding:0;
+    transition:background .1s ease-out;
   }
   .mnav-item.mnav-scanner svg{width:26px;height:26px;}
   .mnav-item.mnav-scanner:active{background:var(--accent-dark);}
@@ -614,23 +648,30 @@
       <h2>Übersicht</h2>
     </div>
     <div class="overview-body">
-      <div class="stats">
-        <div class="stat-card accent">
-          <div class="label">Anmeldungen</div>
-          <div class="value" id="statParticipants">–</div>
-        </div>
-        <div class="stat-card ok">
-          <div class="label">Eingecheckt</div>
-          <div class="value" id="statCheckedIn">–</div>
-        </div>
-        <div class="stat-card">
-          <div class="label">Absagen</div>
-          <div class="value" id="statCancellations">–</div>
-        </div>
-      </div>
-
       <div class="overview-grid">
-        <div class="overview-card">
+        <div class="overview-card mini-stats-card">
+          <h3>Kennzahlen</h3>
+          <div class="mini-stats">
+            <div class="mini-stat overview-link" data-target="participantsPanel" role="button" tabindex="0">
+              <div class="mini-stat-value" id="statParticipants">–</div>
+              <div class="mini-stat-label">Anmeldungen</div>
+            </div>
+            <div class="mini-stat overview-link ok" data-target="participantsPanel" role="button" tabindex="0">
+              <div class="mini-stat-value" id="statCheckedIn">–</div>
+              <div class="mini-stat-label">Eingecheckt</div>
+            </div>
+            <div class="mini-stat overview-link" data-target="cancellationsPanel" role="button" tabindex="0">
+              <div class="mini-stat-value" id="statCancellations">–</div>
+              <div class="mini-stat-label">Absagen</div>
+            </div>
+          </div>
+        </div>
+        <div class="overview-card overview-card-link overview-link" id="contactOverviewCard" data-target="contactPanel" role="button" tabindex="0">
+          <h3>Kontaktanfragen</h3>
+          <div class="capacity-label" id="contactOverviewCount">–</div>
+          <div class="capacity-sub">Neue Nachrichten über das Kontaktformular ansehen →</div>
+        </div>
+        <div class="overview-card" id="capacityCard">
           <h3>Auslastung</h3>
           <div class="capacity-bar-track">
             <div class="capacity-bar-fill" id="capacityFill"></div>
@@ -638,14 +679,9 @@
           <div class="capacity-label" id="capacityLabel">–</div>
           <div class="capacity-sub" id="capacitySub"></div>
         </div>
-        <div class="overview-card">
+        <div class="overview-card" id="latestCard">
           <h3>Neueste Anmeldungen</h3>
           <ul class="latest-list" id="latestList"></ul>
-        </div>
-        <div class="overview-card overview-card-link" id="contactOverviewCard" data-target="contactPanel" role="button" tabindex="0">
-          <h3>Kontaktanfragen</h3>
-          <div class="capacity-label" id="contactOverviewCount">–</div>
-          <div class="capacity-sub">Neue Nachrichten über das Kontaktformular ansehen →</div>
         </div>
       </div>
     </div>
@@ -743,6 +779,7 @@
           <th>Betreff</th>
           <th>Nachricht</th>
           <th>Eingegangen am</th>
+          <th>Status</th>
           <th>Aktionen</th>
         </tr>
       </thead>
@@ -838,6 +875,32 @@
   </div>
 </div>
 
+<!-- Modal: Kontaktanfrage im System beantworten -->
+<div class="modal-backdrop" id="replyModalBackdrop">
+  <div class="modal">
+    <h3>Antworten</h3>
+    <div class="reply-original">
+      <div class="reply-original-label">Ursprüngliche Nachricht von <span id="replyOriginalSender"></span></div>
+      <div class="reply-original-subject" id="replyOriginalSubject"></div>
+      <div class="reply-original-text" id="replyOriginalMessage"></div>
+    </div>
+    <form id="replyForm">
+      <div class="field full">
+        <label for="reply_text">Ihre Antwort <span class="req">*</span></label>
+        <textarea id="reply_text" name="reply_text" rows="7" required style="font-family:inherit;font-size:14px;color:var(--ink);padding:12px 14px;border:1.5px solid var(--line);border-radius:4px;background:#fff;resize:vertical;width:100%;"></textarea>
+      </div>
+      <p class="modal-error" id="replyModalError"></p>
+      <p style="font-size:12px;color:#8a8f99;margin-top:10px;">
+        Die Antwort wird per E-Mail verschickt und die Anfrage automatisch als „beantwortet" markiert.
+      </p>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="replyModalCancelBtn">Abbrechen</button>
+        <button type="submit" class="btn btn-primary" id="replySubmitBtn">Antwort senden</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   /* ============================================================
      DATA LAYER – hier später gegen Supabase austauschen
@@ -870,7 +933,7 @@
     return { id: row.id, vorname: row.vorname, nachname: row.nachname, firma: row.firma || '', email: row.email, telefon: row.telefon || '', createdAt: row.created_at };
   }
   function mapContactMessageFromDb(row){
-    return { id: row.id, name: row.name, email: row.email, subject: row.subject, message: row.message, createdAt: row.created_at };
+    return { id: row.id, name: row.name, email: row.email, subject: row.subject, message: row.message, answered: row.answered, createdAt: row.created_at };
   }
 
   // Maximale Teilnehmerzahl der Veranstaltung – für das Auslastungsdiagramm.
@@ -967,6 +1030,26 @@
   async function deleteContactMessage(id){
     const { error } = await supabase.from('contact_messages').delete().eq('id', id);
     if (error) throw new Error(error.message);
+  }
+
+  // Manuelles Umschalten von "beantwortet" (z. B. wenn per normaler E-Mail
+  // geantwortet wurde, statt ueber die System-Antwortfunktion).
+  async function toggleContactAnswered(id, newValue){
+    const { error } = await supabase.from('contact_messages').update({ answered: newValue }).eq('id', id);
+    if (error) throw new Error(error.message);
+  }
+
+  // Antwort ueber das System senden: ruft die Edge Function direkt auf
+  // (kein Datenbank-Webhook noetig, da hier ein sofortiges Ergebnis noetig ist).
+  // "Verify JWT" ist bei dieser Funktion bewusst AN -> supabase.functions.invoke()
+  // haengt automatisch das Login-Token der eingeloggten Admin-Person an.
+  async function sendContactReply(messageId, replyText){
+    const { data, error } = await supabase.functions.invoke('send-contact-reply', {
+      body: { messageId, replyText }
+    });
+    if (error) throw new Error(error.message || 'Antwort konnte nicht gesendet werden.');
+    if (data && data.error) throw new Error(data.error);
+    return data;
   }
 
   async function promoteFromWaitlist(id){
@@ -1174,9 +1257,15 @@
           </div>
         </td>
         <td data-label="Eingegangen am">${new Date(m.createdAt).toLocaleString('de-DE')}</td>
+        <td data-label="Status">
+          <label class="answered-toggle ${m.answered ? 'answered' : ''}">
+            <input type="checkbox" data-toggle-answered="${m.id}" ${m.answered ? 'checked' : ''}>
+            ${m.answered ? '✓ Beantwortet' : 'Offen'}
+          </label>
+        </td>
         <td data-label="Aktionen">
           <div class="actions-cell">
-            <a class="btn btn-sm btn-ok" href="mailto:${encodeURIComponent(m.email)}?subject=${encodeURIComponent('Re: ' + m.subject)}">Antworten</a>
+            <button class="btn btn-sm btn-ok" data-reply="${m.id}">Antworten</button>
             <button class="btn btn-sm btn-outline" data-delcontact="${m.id}">Entfernen</button>
           </div>
         </td>
@@ -1270,16 +1359,15 @@
     document.querySelectorAll('.nav-btn, .mnav-item').forEach(btn => {
       btn.addEventListener('click', () => activatePanel(btn.getAttribute('data-target')));
     });
-    const contactCard = document.getElementById('contactOverviewCard');
-    if(contactCard){
-      contactCard.addEventListener('click', () => activatePanel(contactCard.getAttribute('data-target')));
-      contactCard.addEventListener('keydown', (e) => {
+    document.querySelectorAll('.overview-link').forEach(el => {
+      el.addEventListener('click', () => activatePanel(el.getAttribute('data-target')));
+      el.addEventListener('keydown', (e) => {
         if(e.key === 'Enter' || e.key === ' '){
           e.preventDefault();
-          activatePanel(contactCard.getAttribute('data-target'));
+          activatePanel(el.getAttribute('data-target'));
         }
       });
-    }
+    });
   });
 
   // Excel-Export
@@ -1334,8 +1422,12 @@
     const promoteId = e.target.getAttribute('data-promote');
     const delWaitlistId = e.target.getAttribute('data-delwaitlist');
     const delContactId = e.target.getAttribute('data-delcontact');
+    const replyId = e.target.getAttribute('data-reply');
 
     try{
+      if(replyId){
+        openReplyModal(replyId);
+      }
       if(checkinId){
         await toggleCheckin(checkinId);
         loadAll();
@@ -1402,6 +1494,70 @@
     }catch(err){
       modalError.textContent = err.message || 'Ein Fehler ist aufgetreten.';
       modalError.classList.add('show');
+    }
+  });
+
+  // Modal: Kontaktanfrage im System beantworten
+  const replyModalBackdrop = document.getElementById('replyModalBackdrop');
+  const replyForm = document.getElementById('replyForm');
+  const replyModalError = document.getElementById('replyModalError');
+  const replySubmitBtn = document.getElementById('replySubmitBtn');
+  let replyTargetId = null;
+
+  function openReplyModal(id){
+    const msg = currentContactMessages.find(m => m.id === id);
+    if(!msg) return;
+    replyTargetId = id;
+    replyForm.reset();
+    replyModalError.classList.remove('show');
+    document.getElementById('replyOriginalSender').textContent = msg.name + ' (' + msg.email + ')';
+    document.getElementById('replyOriginalSubject').textContent = msg.subject;
+    document.getElementById('replyOriginalMessage').textContent = msg.message;
+    replyModalBackdrop.classList.add('open');
+    document.getElementById('reply_text').focus();
+  }
+
+  document.getElementById('replyModalCancelBtn').addEventListener('click', () => {
+    replyModalBackdrop.classList.remove('open');
+  });
+  replyModalBackdrop.addEventListener('click', (e) => {
+    if(e.target === replyModalBackdrop) replyModalBackdrop.classList.remove('open');
+  });
+
+  replyForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if(!replyTargetId) return;
+    const replyText = document.getElementById('reply_text').value.trim();
+    if(!replyText) return;
+
+    replySubmitBtn.disabled = true;
+    replySubmitBtn.textContent = 'Wird gesendet …';
+    replyModalError.classList.remove('show');
+
+    try{
+      await sendContactReply(replyTargetId, replyText);
+      replyModalBackdrop.classList.remove('open');
+      loadAll();
+    }catch(err){
+      replyModalError.textContent = err.message || 'Antwort konnte nicht gesendet werden.';
+      replyModalError.classList.add('show');
+    }finally{
+      replySubmitBtn.disabled = false;
+      replySubmitBtn.textContent = 'Antwort senden';
+    }
+  });
+
+  // Manuelles Umschalten "beantwortet" (z. B. nach Antwort per normaler E-Mail)
+  document.addEventListener('change', async (e) => {
+    const toggleId = e.target.getAttribute('data-toggle-answered');
+    if(!toggleId) return;
+    const newValue = e.target.checked;
+    try{
+      await toggleContactAnswered(toggleId, newValue);
+      loadAll();
+    }catch(err){
+      alert('Status konnte nicht geändert werden: ' + err.message);
+      e.target.checked = !newValue;
     }
   });
 

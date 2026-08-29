@@ -337,7 +337,7 @@
 </style>
 <script src="config.js?v=2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.52.1/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" onerror="console.error('[QRCode] jsdelivr fehlgeschlagen, versuche unpkg als Rückfall …'); var s=document.createElement('script'); s.src='https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js'; s.onerror=function(){ console.error('[QRCode] Auch unpkg fehlgeschlagen.'); }; document.head.appendChild(s);"></script>
+<script src="https://cdn.jsdelivr.net/npm/davidshimjs-qrcodejs@0.0.2/qrcode.min.js" onerror="console.error('[QRCode] Bibliothek konnte nicht geladen werden.');"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
@@ -623,141 +623,129 @@
     // ===== Ticket im Browser rendern (Name + Termin + QR-Code) und als PNG/PDF anbietbar machen =====
     var ticketCanvasEl = null;
 
-    // Wartet bis zu 5 Sekunden darauf, dass die QRCode-Bibliothek verfügbar ist
-    // (falls die Hauptquelle langsam/fehlgeschlagen ist und der Rückfall auf
-    // unpkg.com noch nachlädt), statt sofort mit einem Fehler abzubrechen.
-    function waitForQRCode(callback, attemptsLeft){
-      if(typeof attemptsLeft === 'undefined') attemptsLeft = 50;
-      if(typeof QRCode !== 'undefined'){
-        callback(true);
-        return;
-      }
-      if(attemptsLeft <= 0){
-        callback(false);
-        return;
-      }
-      setTimeout(function(){ waitForQRCode(callback, attemptsLeft - 1); }, 100);
-    }
-
     function buildTicket(participantId, fullName){
       console.log('[Ticket] Starte Erzeugung für', participantId);
 
-      waitForQRCode(function(available){
-        if(!available){
-          console.error('[Ticket] QRCode-Bibliothek konnte auch nach Warten nicht geladen werden.');
-          var box = document.getElementById('qrPreviewBox');
-          box.innerHTML = '<p style="color:#c94b4b;font-size:13.5px;">Ihr Ticket konnte nicht angezeigt werden (Bibliothek konnte nicht geladen werden). Bitte laden Sie die Seite neu, oder Ihr Ticket wird Ihnen zusätzlich per E-Mail zugeschickt.</p>';
-          box.style.display = 'block';
-          return;
-        }
+      if(typeof QRCode === 'undefined'){
+        console.error('[Ticket] QRCode-Bibliothek nicht verfügbar.');
+        var errBox = document.getElementById('qrPreviewBox');
+        errBox.innerHTML = '<p style="color:#c94b4b;font-size:13.5px;">Ihr Ticket konnte hier nicht angezeigt werden. Sie erhalten es zusätzlich per E-Mail.</p>';
+        errBox.style.display = 'block';
+        return;
+      }
 
-        var qrData = 'WFS-CHECKIN:' + participantId;
+      var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+      ready.then(function(){
+        var hiddenContainer = null;
+        try{
+          var qrData = 'WFS-CHECKIN:' + participantId;
 
-        QRCode.toDataURL(qrData, { width: 440, margin: 1 }, function(err, qrDataUrl){
-          if(err){
-            console.error('[Ticket] QR-Code konnte nicht erzeugt werden:', err);
+          // Die Bibliothek rendert synchron ein <canvas> in einen Container --
+          // dieser bleibt unsichtbar, wir übernehmen den QR-Code direkt ins Ticket.
+          hiddenContainer = document.createElement('div');
+          hiddenContainer.style.position = 'absolute';
+          hiddenContainer.style.left = '-9999px';
+          hiddenContainer.style.top = '0';
+          document.body.appendChild(hiddenContainer);
+
+          new QRCode(hiddenContainer, {
+            text: qrData,
+            width: 440,
+            height: 440,
+            correctLevel: QRCode.CorrectLevel.M
+          });
+
+          var qrSource = hiddenContainer.querySelector('canvas') || hiddenContainer.querySelector('img');
+          if(!qrSource){
+            console.error('[Ticket] QR-Code-Element wurde nicht erzeugt.');
+            document.body.removeChild(hiddenContainer);
             return;
           }
-          console.log('[Ticket] QR-Code-DataURL erzeugt, Länge:', qrDataUrl ? qrDataUrl.length : 0);
+          console.log('[Ticket] QR-Code erzeugt, zeichne Ticket-Canvas …');
 
-        var qrImg = new Image();
-        qrImg.onerror = function(err){
-          console.error('[Ticket] QR-Code-Bild konnte nicht geladen werden:', err);
-        };
-        qrImg.onload = function(){
-          console.log('[Ticket] QR-Code-Bild geladen, zeichne Canvas …');
-          try{
-            var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
-            ready.then(function(){
-              try{
-                var canvas = document.getElementById('ticketCanvas');
-                if(!canvas){ console.error('[Ticket] #ticketCanvas nicht im DOM gefunden.'); return; }
-                var W = 640, H = 900;
-                canvas.width = W;
-                canvas.height = H;
-                var ctx = canvas.getContext('2d');
+          var canvas = document.getElementById('ticketCanvas');
+          var W = 640, H = 900;
+          canvas.width = W;
+          canvas.height = H;
+          var ctx = canvas.getContext('2d');
 
-                // Hintergrund
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, W, H);
-                ctx.strokeStyle = '#e2e5ea';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
+          // Hintergrund
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, W, H);
+          ctx.strokeStyle = '#e2e5ea';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(0.5, 0.5, W - 1, H - 1);
 
-                // Obere Farbleiste
-                ctx.fillStyle = '#b5152b';
-                ctx.fillRect(0, 0, W, 10);
+          // Obere Farbleiste
+          ctx.fillStyle = '#b5152b';
+          ctx.fillRect(0, 0, W, 10);
 
-                // Kopfzeile
-                ctx.fillStyle = '#b5152b';
-                ctx.fillRect(48, 52, 20, 20);
-                ctx.fillStyle = '#0d1117';
-                ctx.font = '800 21px Inter, Arial, sans-serif';
-                ctx.textAlign = 'left';
-                ctx.fillText('Wirtschaftsforum Stralsund', 80, 68);
+          // Kopfzeile
+          ctx.fillStyle = '#b5152b';
+          ctx.fillRect(48, 52, 20, 20);
+          ctx.fillStyle = '#0d1117';
+          ctx.font = '800 21px Inter, Arial, sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText('Wirtschaftsforum Stralsund', 80, 68);
 
-                ctx.font = '700 11px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#8a8f99';
-                ctx.fillText('EINTRITTSTICKET', 48, 112);
+          ctx.font = '700 11px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#8a8f99';
+          ctx.fillText('EINTRITTSTICKET', 48, 112);
 
-                // Name
-                ctx.font = '800 28px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#0d1117';
-                ctx.fillText(fullName || '', 48, 150);
+          // Name
+          ctx.font = '800 28px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#0d1117';
+          ctx.fillText(fullName || '', 48, 150);
 
-                // Trennlinie
-                ctx.strokeStyle = '#e2e5ea';
-                ctx.beginPath();
-                ctx.moveTo(48, 180);
-                ctx.lineTo(W - 48, 180);
-                ctx.stroke();
+          // Trennlinie
+          ctx.strokeStyle = '#e2e5ea';
+          ctx.beginPath();
+          ctx.moveTo(48, 180);
+          ctx.lineTo(W - 48, 180);
+          ctx.stroke();
 
-                // Termin
-                ctx.font = '700 11px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#8a8f99';
-                ctx.fillText('TERMIN', 48, 214);
-                ctx.font = '700 17px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#0d1117';
-                ctx.fillText('05. November 2026 · 18:00 Uhr', 48, 238);
+          // Termin
+          ctx.font = '700 11px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#8a8f99';
+          ctx.fillText('TERMIN', 48, 214);
+          ctx.font = '700 17px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#0d1117';
+          ctx.fillText('05. November 2026 · 18:00 Uhr', 48, 238);
 
-                // Ort
-                ctx.font = '700 11px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#8a8f99';
-                ctx.fillText('ORT', 48, 274);
-                ctx.font = '700 17px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#0d1117';
-                ctx.fillText('Zunftstraße 5 · 18437 Stralsund', 48, 298);
+          // Ort
+          ctx.font = '700 11px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#8a8f99';
+          ctx.fillText('ORT', 48, 274);
+          ctx.font = '700 17px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#0d1117';
+          ctx.fillText('Zunftstraße 5 · 18437 Stralsund', 48, 298);
 
-                // QR-Code zentriert
-                var qrSize = 420;
-                var qrX = (W - qrSize) / 2;
-                var qrY = 344;
-                ctx.strokeStyle = '#e2e5ea';
-                ctx.strokeRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28);
-                ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+          // QR-Code zentriert (direkt aus dem von der Bibliothek erzeugten Canvas/Bild)
+          var qrSize = 420;
+          var qrX = (W - qrSize) / 2;
+          var qrY = 344;
+          ctx.strokeStyle = '#e2e5ea';
+          ctx.strokeRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28);
+          ctx.drawImage(qrSource, qrX, qrY, qrSize, qrSize);
 
-                // Fusszeile
-                ctx.font = '600 13px Inter, Arial, sans-serif';
-                ctx.fillStyle = '#8a8f99';
-                ctx.textAlign = 'center';
-                ctx.fillText('Bitte zeigen Sie diesen Code am Einlass vor.', W / 2, qrY + qrSize + 46);
-                ctx.textAlign = 'left';
+          // Fusszeile
+          ctx.font = '600 13px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#8a8f99';
+          ctx.textAlign = 'center';
+          ctx.fillText('Bitte zeigen Sie diesen Code am Einlass vor.', W / 2, qrY + qrSize + 46);
+          ctx.textAlign = 'left';
 
-                ticketCanvasEl = canvas;
-                document.getElementById('qrPreviewBox').style.display = 'block';
-                console.log('[Ticket] Fertig gezeichnet und sichtbar gemacht.');
-              }catch(drawErr){
-                console.error('[Ticket] Fehler beim Zeichnen des Canvas:', drawErr);
-              }
-            }).catch(function(fontErr){
-              console.error('[Ticket] Fehler beim Warten auf Schriftarten:', fontErr);
-            });
-          }catch(outerErr){
-            console.error('[Ticket] Unerwarteter Fehler:', outerErr);
-          }
-        };
-        qrImg.src = qrDataUrl;
-        });
+          document.body.removeChild(hiddenContainer);
+
+          ticketCanvasEl = canvas;
+          document.getElementById('qrPreviewBox').style.display = 'block';
+          console.log('[Ticket] Fertig gezeichnet und sichtbar gemacht.');
+        }catch(err){
+          console.error('[Ticket] Fehler beim Erzeugen des Tickets:', err);
+          if(hiddenContainer && hiddenContainer.parentNode) document.body.removeChild(hiddenContainer);
+        }
+      }).catch(function(fontErr){
+        console.error('[Ticket] Fehler beim Warten auf Schriftarten:', fontErr);
       });
     }
 

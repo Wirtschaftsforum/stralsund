@@ -504,13 +504,13 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Wird gesendet …';
 
-      var { error } = await supabase.from('cancellations').insert([{
-        vorname: data.vorname || null,
-        nachname: data.nachname || null,
-        email: data.email
-      }]);
+      var { data: rpcResult, error } = await supabase.rpc('cancel_registration', {
+        p_email: data.email,
+        p_vorname: data.vorname || null,
+        p_nachname: data.nachname || null
+      });
 
-      if(error){
+      if(error || !rpcResult || rpcResult.status !== 'ok'){
         alert('Ihre Absage konnte nicht übermittelt werden. Bitte prüfen Sie Ihre Angaben oder kontaktieren Sie uns unter wirtschaftsforum@makerport.de');
         submitBtn.disabled = false;
         submitBtn.textContent = 'Absagen';

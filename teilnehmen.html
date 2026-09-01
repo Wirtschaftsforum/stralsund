@@ -664,7 +664,7 @@
           console.log('[Ticket] QR-Code erzeugt, zeichne Ticket-Canvas …');
 
           var canvas = document.getElementById('ticketCanvas');
-          var W = 640, H = 900;
+          var W = 640, H = 930;
           canvas.width = W;
           canvas.height = H;
           var ctx = canvas.getContext('2d');
@@ -710,20 +710,28 @@
           ctx.fillText('TERMIN', 48, 214);
           ctx.font = '700 17px Inter, Arial, sans-serif';
           ctx.fillStyle = '#0d1117';
-          ctx.fillText('05. November 2026 · 18:00 Uhr', 48, 238);
+          ctx.fillText('05. November 2026', 48, 238);
+
+          // Uhrzeit
+          ctx.font = '700 11px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#8a8f99';
+          ctx.fillText('UHRZEIT', 48, 274);
+          ctx.font = '700 17px Inter, Arial, sans-serif';
+          ctx.fillStyle = '#0d1117';
+          ctx.fillText('Einlass: 18:30 Uhr · Beginn: 19:00 Uhr', 48, 298);
 
           // Ort
           ctx.font = '700 11px Inter, Arial, sans-serif';
           ctx.fillStyle = '#8a8f99';
-          ctx.fillText('ORT', 48, 274);
+          ctx.fillText('ORT', 48, 334);
           ctx.font = '700 17px Inter, Arial, sans-serif';
           ctx.fillStyle = '#0d1117';
-          ctx.fillText('Zunftstraße 5 · 18437 Stralsund', 48, 298);
+          ctx.fillText('Zunftstraße 5 · 18437 Stralsund', 48, 358);
 
           // QR-Code zentriert (direkt aus dem von der Bibliothek erzeugten Canvas/Bild)
           var qrSize = 420;
           var qrX = (W - qrSize) / 2;
-          var qrY = 344;
+          var qrY = 400;
           ctx.strokeStyle = '#e2e5ea';
           ctx.strokeRect(qrX - 14, qrY - 14, qrSize + 28, qrSize + 28);
           ctx.drawImage(qrSource, qrX, qrY, qrSize, qrSize);

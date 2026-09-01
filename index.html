@@ -116,7 +116,7 @@
     position:absolute;inset:0;z-index:-1;
     background-image:
       linear-gradient(0deg, rgba(10,6,8,.92) 0%, rgba(10,6,8,.55) 42%, rgba(10,6,8,.15) 70%),
-      url('https://soundprojekt.de/transforms/images/Referenzen/BOOT/_2560x1707_crop_center-center_none/653/Projekt-RK-Sealine-BOOT-2020-D%C3%BCsseldorf-StandPhotography-2615-Ir.webp');
+      url('hero-header.jpg');
     background-size:cover;background-position:center 40%;
   }
   .hero-inner{padding:110px 0 64px;width:100%;}
@@ -336,8 +336,8 @@
   }
   .cookie-accept{background:var(--accent,#b5152b);color:#fff;}
   .cookie-accept:hover{background:var(--accent-dark,#8a0f21);}
-  .cookie-necessary{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);}
-  .cookie-necessary:hover{border-color:#fff;}
+  .cookie-necessary{background:transparent;color:#fff;border-color:#fff;}
+  .cookie-necessary:hover{background:rgba(255,255,255,.1);}
 
   @media (max-width:640px){
     .a11y-panel{right:12px;left:12px;width:auto;bottom:78px;}
@@ -381,7 +381,7 @@
   <div class="hero-bg"></div>
   <div class="wrap hero-inner">
     <span class="hero-tag">05. November 2026 · Stralsund</span>
-    <h1>Einladung zum Wirtschaftsforum Stralsund</h1>
+    <h1>Einladung zum Wirtschaftsforum Stralsund II/2026</h1>
     <p class="hero-note">Für eine bessere Planung bitten wir Sie, auf „Teilnehmen“ oder „Absagen“ zu klicken. Die Plätze sind streng begrenzt.</p>
     <div class="hero-actions">
       <a href="teilnehmen.html" class="btn btn-primary">Teilnehmen <span class="btn-arrow">→</span></a>
@@ -426,7 +426,11 @@
 
       <div class="fact">
         <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span>
-        <div><div class="fact-label">Uhrzeit</div><div class="fact-value">18:00 Uhr</div></div>
+        <div>
+          <div class="fact-label">Uhrzeit</div>
+          <div class="fact-value">Einlass: 18:30 Uhr</div>
+          <div class="fact-sub">Beginn: 19:00 Uhr</div>
+        </div>
       </div>
 
       <div class="fact">
@@ -451,7 +455,7 @@
     <div class="footer-grid">
       <div>
         <div class="brand"><span class="mark"></span>Wirtschaftsforum Stralsund</div>
-        <p class="footer-desc">Das Wirtschaftsforum Stralsund 2026 ist eine Initiative der Hansestadt Stralsund und dem Landkreis Vorpommern Rügen, mit Unterstützung des MakerPORT Stralsund.</p>
+        <p class="footer-desc">Das Wirtschaftsforum Stralsund 2026 ist eine Veranstaltung der Hansestadt Stralsund und dem Landkreis Vorpommern-Rügen, mit Unterstützung des MakerPORT Stralsund.</p>
       </div>
       <div>
         <div class="footer-heading">Navigation</div>
@@ -459,7 +463,7 @@
       </div>
       <div>
         <div class="footer-heading">Rechtliches</div>
-        <ul class="footer-links"><li><a href="impressum.html">Impressum</a></li><li><a href="datenschutz.html">Datenschutzerklärung</a></li><li><a href="kontakt.html">Kontakt</a></li></ul>
+        <ul class="footer-links"><li><a href="impressum.html">Impressum</a></li><li><a href="datenschutz.html">Datenschutzerklärung</a></li><li><a href="kontakt.html">Kontakt</a></li><li><a href="#" id="footerCookieLink">Cookie-Einstellungen</a></li></ul>
       </div>
     </div>
     <div class="footer-bottom">
@@ -683,6 +687,14 @@
   }
   if(accept) accept.addEventListener('click', function(){ setChoice('all'); });
   if(necessary) necessary.addEventListener('click', function(){ setChoice('necessary'); });
+
+  var footerCookieLink = document.getElementById('footerCookieLink');
+  if(footerCookieLink){
+    footerCookieLink.addEventListener('click', function(e){
+      e.preventDefault();
+      if(banner) banner.classList.add('show');
+    });
+  }
 })();
 </script>
 

@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 
 <!-- ================= Security-Header (soweit auf GitHub Pages per <meta> moeglich) =================
      GitHub Pages unterstuetzt KEINE echten HTTP-Response-Header (kein Server, keine
@@ -320,12 +324,12 @@
   .cookie-actions{display:flex;gap:10px;flex-wrap:wrap;}
   .cookie-actions button{
     font-family:inherit;font-size:13px;font-weight:700;padding:11px 18px;border-radius:4px;cursor:pointer;
-    border:1.5px solid transparent;transition:background .15s ease,color .15s ease,border-color .15s ease;
+    border:2px solid transparent;transition:background .15s ease,color .15s ease,border-color .15s ease;
   }
-  .cookie-accept{background:var(--accent,#b5152b);color:#fff;}
-  .cookie-accept:hover{background:var(--accent-dark,#8a0f21);}
-  .cookie-necessary{background:transparent;color:#fff;border-color:rgba(255,255,255,.35);}
-  .cookie-necessary:hover{border-color:#fff;}
+  .cookie-accept{background:var(--accent,#b5152b);color:#fff;border-color:var(--accent,#b5152b);}
+  .cookie-accept:hover{background:var(--accent-dark,#8a0f21);border-color:var(--accent-dark,#8a0f21);}
+  .cookie-necessary{background:transparent;color:#fff;border-color:#ffffff;}
+  .cookie-necessary:hover{background:rgba(255,255,255,.12);}
 
   @media (max-width:640px){
     .a11y-panel{right:12px;left:12px;width:auto;bottom:78px;}
